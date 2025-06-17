@@ -40,14 +40,25 @@ backend/
 
 ## API Endpoints
 
-### Chat Endpoints
+### Authentication Endpoints
+- `POST /api/v1/auth/signup` - Register a new user account
+- `POST /api/v1/auth/signin` - Sign in an existing user
+- `POST /api/v1/auth/signout` - Sign out current user
+- `POST /api/v1/auth/refresh` - Refresh access token
+- `GET /api/v1/auth/me` - Get current user information
+- `PUT /api/v1/auth/me` - Update user profile
+- `POST /api/v1/auth/change-password` - Change user password
+- `POST /api/v1/auth/reset-password` - Send password reset email
+- `GET /api/v1/auth/health` - Authentication service health check
+
+### Chat Endpoints (🔒 Authentication Required)
 - `POST /api/v1/chat` - Main chat endpoint with memory context
 - `POST /api/v1/chat/stream` - Streaming chat endpoint (placeholder)
 
-### Memory Management
+### Memory Management (🔒 Authentication Required)
 - `POST /api/v1/memories/search` - Search through user memories
-- `GET /api/v1/memories/{user_id}/summary` - Get conversation summary
-- `DELETE /api/v1/memories/{user_id}` - Delete user memories
+- `GET /api/v1/memories/summary` - Get conversation summary
+- `DELETE /api/v1/memories` - Delete user memories
 
 ### System
 - `GET /` - Root endpoint
@@ -104,23 +115,44 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ## Usage Examples
 
-### Chat with Memory
+### 1. User Registration
 ```bash
-curl -X POST "http://localhost:8000/api/v1/chat" \
+curl -X POST "http://localhost:8000/api/v1/auth/signup" \
   -H "Content-Type: application/json" \
   -d '{
-    "message": "Hello, I am learning Python",
-    "user_id": "user123"
+    "email": "user@example.com",
+    "password": "securepassword",
+    "full_name": "John Doe"
   }'
 ```
 
-### Search Memories
+### 2. User Sign In
+```bash
+curl -X POST "http://localhost:8000/api/v1/auth/signin" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "securepassword"
+  }'
+```
+
+### 3. Chat with Memory (Authenticated)
+```bash
+curl -X POST "http://localhost:8000/api/v1/chat" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "message": "Hello, I am learning Python"
+  }'
+```
+
+### 4. Search Memories (Authenticated)
 ```bash
 curl -X POST "http://localhost:8000/api/v1/memories/search" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -d '{
     "query": "Python learning",
-    "user_id": "user123",
     "limit": 5
   }'
 ```
@@ -136,11 +168,14 @@ The backend follows a clean architecture pattern:
 
 ## Key Features
 
-- **Memory Integration**: Each conversation is stored and retrieved for context
-- **User Isolation**: Memories are stored per user ID
-- **Error Resilience**: Graceful handling of API failures
-- **Logging**: Comprehensive logging for debugging and monitoring
-- **Type Safety**: Full type hints with Pydantic validation
+- **🔐 Supabase Authentication**: Secure user registration, login, and session management
+- **🧠 Memory Integration**: Each conversation is stored and retrieved for context
+- **👤 User Isolation**: Memories are automatically isolated per authenticated user
+- **🔒 Protected Routes**: Chat and memory endpoints require authentication
+- **🛡️ Error Resilience**: Graceful handling of API failures
+- **📊 Comprehensive Logging**: Detailed logging for debugging and monitoring
+- **🔒 Type Safety**: Full type hints with Pydantic validation
+- **🚀 JWT Token Support**: Access and refresh token management
 
 ## Development
 
@@ -151,10 +186,21 @@ The project is designed for easy extension:
 - Define new data models in `schemas/`
 - Configure settings in `config.py`
 
+## Authentication Security
+
+🔒 **Important Security Notes:**
+
+1. **All chat and memory endpoints now require authentication**
+2. **User isolation is automatically enforced** - users can only access their own memories
+3. **JWT tokens are used for authentication** - include `Authorization: Bearer <token>` header
+4. **Supabase handles password security** - passwords are securely hashed and stored
+5. **Email confirmation** may be required depending on your Supabase settings
+
 ## Migration from Test Code
 
 Your original test code in `app/test/memory-agent.py` has been refactored into:
 - Memory operations → `services/memory_service.py`
-- Chat logic → `services/chat_service.py`
+- Chat logic → `services/chat_service.py`  
 - API interface → `api/chat.py`
-- Data models → `schemas/chat.py` 
+- Authentication → `services/auth_service.py` & `api/auth.py`
+- Data models → `schemas/chat.py` & `schemas/auth.py` 
