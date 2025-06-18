@@ -15,6 +15,7 @@ backend/
 │   │   └── chat.py          # Chat endpoints
 │   ├── services/
 │   │   ├── __init__.py
+│   │   ├── auth_middleware.py # JWT token validation middleware
 │   │   ├── chat_service.py  # OpenAI chat logic
 │   │   └── memory_service.py # Mem0 memory management
 │   ├── schemas/
@@ -40,14 +41,17 @@ backend/
 
 ## API Endpoints
 
-### Chat Endpoints
+### Authentication
+Authentication is handled by the frontend directly with Supabase. The backend only validates JWT tokens from authenticated users.
+
+### Chat Endpoints (🔒 Authentication Required)
 - `POST /api/v1/chat` - Main chat endpoint with memory context
 - `POST /api/v1/chat/stream` - Streaming chat endpoint (placeholder)
 
-### Memory Management
+### Memory Management (🔒 Authentication Required)
 - `POST /api/v1/memories/search` - Search through user memories
-- `GET /api/v1/memories/{user_id}/summary` - Get conversation summary
-- `DELETE /api/v1/memories/{user_id}` - Delete user memories
+- `GET /api/v1/memories/summary` - Get conversation summary
+- `DELETE /api/v1/memories` - Delete user memories
 
 ### System
 - `GET /` - Root endpoint
@@ -104,23 +108,25 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ## Usage Examples
 
-### Chat with Memory
+**Note**: Authentication is handled by the frontend. These examples assume you have a valid JWT token from Supabase.
+
+### 1. Chat with Memory (Authenticated)
 ```bash
 curl -X POST "http://localhost:8000/api/v1/chat" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -d '{
-    "message": "Hello, I am learning Python",
-    "user_id": "user123"
+    "message": "Hello, I am learning Python"
   }'
 ```
 
-### Search Memories
+### 2. Search Memories (Authenticated)
 ```bash
 curl -X POST "http://localhost:8000/api/v1/memories/search" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -d '{
     "query": "Python learning",
-    "user_id": "user123",
     "limit": 5
   }'
 ```
@@ -136,11 +142,14 @@ The backend follows a clean architecture pattern:
 
 ## Key Features
 
-- **Memory Integration**: Each conversation is stored and retrieved for context
-- **User Isolation**: Memories are stored per user ID
-- **Error Resilience**: Graceful handling of API failures
-- **Logging**: Comprehensive logging for debugging and monitoring
-- **Type Safety**: Full type hints with Pydantic validation
+- **🔐 Supabase Authentication**: Secure user registration, login, and session management
+- **🧠 Memory Integration**: Each conversation is stored and retrieved for context
+- **👤 User Isolation**: Memories are automatically isolated per authenticated user
+- **🔒 Protected Routes**: Chat and memory endpoints require authentication
+- **🛡️ Error Resilience**: Graceful handling of API failures
+- **📊 Comprehensive Logging**: Detailed logging for debugging and monitoring
+- **🔒 Type Safety**: Full type hints with Pydantic validation
+- **🚀 JWT Token Support**: Access and refresh token management
 
 ## Development
 
@@ -151,10 +160,21 @@ The project is designed for easy extension:
 - Define new data models in `schemas/`
 - Configure settings in `config.py`
 
+## Authentication Security
+
+🔒 **Important Security Notes:**
+
+1. **All chat and memory endpoints now require authentication**
+2. **User isolation is automatically enforced** - users can only access their own memories
+3. **JWT tokens are used for authentication** - include `Authorization: Bearer <token>` header
+4. **Supabase handles password security** - passwords are securely hashed and stored
+5. **Email confirmation** may be required depending on your Supabase settings
+
 ## Migration from Test Code
 
 Your original test code in `app/test/memory-agent.py` has been refactored into:
 - Memory operations → `services/memory_service.py`
-- Chat logic → `services/chat_service.py`
+- Chat logic → `services/chat_service.py`  
 - API interface → `api/chat.py`
-- Data models → `schemas/chat.py` 
+- Authentication → `services/auth_service.py` & `api/auth.py`
+- Data models → `schemas/chat.py` & `schemas/auth.py` 
