@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { Session, User } from '@supabase/supabase-js'
+import { Session, User, AuthError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { apiService } from '../lib/api'
 
@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
-  signUp: (email: string, password: string, fullName?: string) => Promise<{ success: boolean; error?: string }>
+  signUp: (email: string, password: string, fullName: string) => Promise<{ success: boolean; error?: string }>
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   signInWithGoogle: () => Promise<{ success: boolean; error?: string }>
   signOut: () => Promise<void>
@@ -34,7 +34,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Get initial session with error handling
     const initializeAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession()
@@ -44,20 +43,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setSession(session)
         setUser(session?.user ?? null)
         
-        // Set API service token
         apiService.setAccessToken(session?.access_token ?? null)
       } catch (error) {
         console.warn('Failed to initialize auth:', error)
-        // Continue without auth if there's an error
-        apiService.setAccessToken(null)
       } finally {
         setLoading(false)
       }
     }
 
     initializeAuth()
+  }, [])
 
-    // Listen for auth changes with error handling
+  useEffect(() => {
     let subscription: any
     try {
       const {
@@ -77,31 +74,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       apiService.setAccessToken(null)
     }
 
-    return () => {
-      if (subscription) {
-        subscription.unsubscribe()
-      }
-    }
+    return () => subscription.unsubscribe()
   }, [])
 
-  const signUp = async (email: string, password: string, fullName?: string) => {
+  const signUp = async (email: string, password: string, fullName: string) => {
     try {
-
-      
-      // Validate inputs
-      if (!email || !password) {
-        return { success: false, error: 'Email and password are required' }
-      }
-      
-      if (!email.includes('@')) {
-        return { success: false, error: 'Please enter a valid email address' }
-      }
-      
-      if (password.length < 6) {
-        return { success: false, error: 'Password must be at least 6 characters long' }
-      }
-      
-      const metadata = fullName ? { full_name: fullName } : {}
+      const metadata = { full_name: fullName }
       
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
@@ -112,92 +90,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
       })
 
       if (error) {
-
+        console.error('Sign up error:', error)
         return { success: false, error: error.message }
       }
-
-
       
-      // Check if email confirmation is required
-      if (data.user && !data.user.email_confirmed_at) {
-        return { 
-          success: true, 
-          error: 'Please check your email and click the confirmation link before signing in.' 
-        }
-      }
+      console.log('Sign up successful:', data)
+      console.log('Session created:', !!data.session)
+      console.log('User created:', !!data.user)
       
       return { success: true }
     } catch (error) {
-      
+      console.error('Sign up exception:', error)
       return { success: false, error: 'An unexpected error occurred' }
     }
   }
 
     const signIn = async (email: string, password: string) => {
     try {
-      console.log('🔑 AuthContext signIn called with:', email)
-      
-      // Validate inputs
-      if (!email || !password) {
-        console.log('❌ Validation failed: missing email or password')
-        return { success: false, error: 'Email and password are required' }
-      }
-      
-      if (!email.includes('@')) {
-        console.log('❌ Validation failed: invalid email format')
-        return { success: false, error: 'Please enter a valid email address' }
-      }
-      
-      console.log('📡 Calling Supabase signInWithPassword...')
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
       })
-
-      console.log('📥 Supabase response - data:', !!data, 'error:', error?.message)
-
-      if (error) {
-        console.log('❌ Supabase error:', error)
-        
-        // Handle specific error cases
-        if (error.message === 'Email not confirmed') {
-          return { 
-            success: false, 
-            error: 'Please check your email and click the confirmation link before signing in.' 
-          }
-        }
-        
-        if (error.message === 'Invalid login credentials') {
-          return { 
-            success: false, 
-            error: 'Invalid email or password. Please check your credentials and try again.' 
-          }
-        }
-        
-        return { success: false, error: error.message }
-      }
-
-      console.log('✅ Sign in successful, user ID:', data?.user?.id)
       return { success: true }
     } catch (error) {
-      console.log('💥 Unexpected error in signIn:', error)
-      return { success: false, error: 'An unexpected error occurred' }
+      return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
     }
   }
 
   const signInWithGoogle = async () => {
     try {
-      // For now, return an error indicating Google OAuth needs additional setup
       return { 
         success: false, 
         error: 'Google OAuth requires additional configuration. Please use email/password authentication for now.' 
       }
-      
-      // TODO: Implement proper Google OAuth with expo-auth-session
-      // This requires:
-      // 1. Setting up Google OAuth credentials in Supabase
-      // 2. Configuring redirect URLs in Supabase Auth settings
-      // 3. Using expo-auth-session for proper OAuth flow in Expo
     } catch (error) {
       return { success: false, error: 'An unexpected error occurred' }
     }

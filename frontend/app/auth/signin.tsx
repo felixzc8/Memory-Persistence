@@ -22,45 +22,36 @@ export default function SignIn() {
   const [showPassword, setShowPassword] = useState(false)
   
   const { signIn } = useAuth()
-  
-  // Debug state changes
-  React.useEffect(() => {
-    console.log('📝 SignIn form state:', { 
-      emailLength: email.length, 
-      passwordLength: password.length, 
-      loading 
-    })
-  }, [email, password, loading])
+
+  const validateForm = () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'please fill in all fields')
+      return false
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(email)) {
+          Alert.alert('Error', 'Please enter a valid email address')
+          return false
+        }
+    return true
+  }
 
   const handleSignIn = async () => {
-    console.log('🔐 Sign in button clicked')
-    console.log('Email:', email)
-    console.log('Password length:', password.length)
-    
-    if (!email || !password) {
-      console.log('❌ Missing email or password')
-      Alert.alert('Error', 'Please fill in all fields')
-      return
-    }
+    if (!validateForm()) return
 
-    console.log('📤 Starting sign in process...')
     setLoading(true)
     try {
       const result = await signIn(email, password)
       console.log('📥 Sign in result:', result)
       
       if (result.success) {
-        console.log('✅ Sign in successful!')
+        router.replace('/chat')
       } else {
-        console.log('❌ Sign in failed:', result.error)
-        Alert.alert('Sign In Failed', result.error || 'An unexpected error occurred')
+        Alert.alert('Sign In Failed', result.error)
       }
-      // Navigation will be handled by the auth context and index page
     } catch (error) {
-      console.log('💥 Unexpected error:', error)
       Alert.alert('Error', 'An unexpected error occurred')
     } finally {
-      console.log('🏁 Sign in process completed')
       setLoading(false)
     }
   }
@@ -159,17 +150,6 @@ export default function SignIn() {
                 }}
               >
                 <Text className="text-blue-500 text-center">Forgot Password?</Text>
-              </TouchableOpacity>
-
-              {/* Debug button */}
-              <TouchableOpacity 
-                className="py-2 mt-4 bg-red-100 rounded-lg"
-                onPress={() => {
-                  console.log('🧪 Debug button clicked!')
-                  Alert.alert('Debug', `Email: ${email}\nPassword: ${password.replace(/./g, '*')}\nAuth function available: ${!!signIn}`)
-                }}
-              >
-                <Text className="text-red-600 text-center text-sm">🧪 Debug Info</Text>
               </TouchableOpacity>
             </View>
           </View>

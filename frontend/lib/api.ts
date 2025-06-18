@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000'
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://0.0.0.0:8000'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -47,9 +47,9 @@ class ApiService {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...options.headers as Record<string, string>,
     }
 
     if (this.accessToken) {

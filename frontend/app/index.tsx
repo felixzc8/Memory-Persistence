@@ -13,13 +13,11 @@ export default function Index() {
     console.log('  - user:', !!user)
     console.log('  - session:', !!session)
     
-    // Set the access token for API calls when session changes
     if (session?.access_token) {
       console.log('🔑 Setting access token for API calls')
       apiService.setAccessToken(session.access_token)
     }
 
-    // Navigate based on authentication state
     if (!loading) {
       if (user) {
         console.log('✅ User authenticated, navigating to chat')
@@ -33,7 +31,6 @@ export default function Index() {
     }
   }, [user, session, loading])
 
-  // Show loading spinner while determining auth state
   return (
     <View className="flex-1 justify-center items-center bg-white">
       <ActivityIndicator size="large" color="#3B82F6" />

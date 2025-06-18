@@ -58,12 +58,8 @@ export default function SignUp() {
     try {
       const result = await signUp(email, password, fullName)
       if (result.success) {
-        const message = result.error || 'Account created successfully. You can now sign in.'
-        Alert.alert(
-          'Success!', 
-          message,
-          [{ text: 'OK', onPress: () => router.push('/auth/signin') }]
-        )
+        Alert.alert('Account created successfully')
+        router.replace('/chat')
       } else {
         Alert.alert('Sign Up Failed', result.error || 'An unexpected error occurred')
       }
@@ -195,7 +191,7 @@ export default function SignUp() {
             </View>
 
             {/* Footer */}
-            <View className="pt-6">
+            <View className="pt-6 flex-1 justify-end">
               <View className="flex-row justify-center items-center">
                 <Text className="text-gray-600">Already have an account? </Text>
                 <TouchableOpacity onPress={() => router.push('/auth/signin')}>
