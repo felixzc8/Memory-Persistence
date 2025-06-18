@@ -7,10 +7,9 @@ from app.schemas.chat import (
     MemorySearchResponse,
     ErrorResponse
 )
-from app.schemas.auth import UserResponse
 from app.services.chat_service import chat_service
 from app.services.memory_service import memory_service
-from app.services.auth_middleware import require_auth, optional_auth
+from app.services.auth_middleware import require_auth, optional_auth, UserResponse
 import logging
 from typing import List
 

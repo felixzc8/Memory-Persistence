@@ -15,6 +15,7 @@ backend/
 │   │   └── chat.py          # Chat endpoints
 │   ├── services/
 │   │   ├── __init__.py
+│   │   ├── auth_middleware.py # JWT token validation middleware
 │   │   ├── chat_service.py  # OpenAI chat logic
 │   │   └── memory_service.py # Mem0 memory management
 │   ├── schemas/
@@ -40,16 +41,8 @@ backend/
 
 ## API Endpoints
 
-### Authentication Endpoints
-- `POST /api/v1/auth/signup` - Register a new user account
-- `POST /api/v1/auth/signin` - Sign in an existing user
-- `POST /api/v1/auth/signout` - Sign out current user
-- `POST /api/v1/auth/refresh` - Refresh access token
-- `GET /api/v1/auth/me` - Get current user information
-- `PUT /api/v1/auth/me` - Update user profile
-- `POST /api/v1/auth/change-password` - Change user password
-- `POST /api/v1/auth/reset-password` - Send password reset email
-- `GET /api/v1/auth/health` - Authentication service health check
+### Authentication
+Authentication is handled by the frontend directly with Supabase. The backend only validates JWT tokens from authenticated users.
 
 ### Chat Endpoints (🔒 Authentication Required)
 - `POST /api/v1/chat` - Main chat endpoint with memory context
@@ -115,28 +108,9 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ## Usage Examples
 
-### 1. User Registration
-```bash
-curl -X POST "http://localhost:8000/api/v1/auth/signup" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "securepassword",
-    "full_name": "John Doe"
-  }'
-```
+**Note**: Authentication is handled by the frontend. These examples assume you have a valid JWT token from Supabase.
 
-### 2. User Sign In
-```bash
-curl -X POST "http://localhost:8000/api/v1/auth/signin" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "securepassword"
-  }'
-```
-
-### 3. Chat with Memory (Authenticated)
+### 1. Chat with Memory (Authenticated)
 ```bash
 curl -X POST "http://localhost:8000/api/v1/chat" \
   -H "Content-Type: application/json" \
@@ -146,7 +120,7 @@ curl -X POST "http://localhost:8000/api/v1/chat" \
   }'
 ```
 
-### 4. Search Memories (Authenticated)
+### 2. Search Memories (Authenticated)
 ```bash
 curl -X POST "http://localhost:8000/api/v1/memories/search" \
   -H "Content-Type: application/json" \

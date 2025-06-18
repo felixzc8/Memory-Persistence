@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     database_url: str = os.getenv("DATABASE_URL", "")
     supabase_url: str = os.getenv("SUPABASE_URL", "")
     supabase_key: str = os.getenv("SUPABASE_KEY", "")
+    supabase_jwt_secret: str = os.getenv("SUPABASE_JWT_SECRET", "")
     
     # Mem0 Configuration
     mem0_collection_name: str = "memories"
