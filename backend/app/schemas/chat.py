@@ -9,7 +9,6 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=2000, description="User's message")
-    user_id: str = Field(default="default_user", description="Unique identifier for the user")
     session_id: Optional[str] = Field(None, description="Session identifier for conversation tracking")
 
 class ChatResponse(BaseModel):
@@ -21,7 +20,6 @@ class ChatResponse(BaseModel):
 
 class MemorySearchRequest(BaseModel):
     query: str = Field(..., min_length=1, description="Search query for memories")
-    user_id: str = Field(default="default_user", description="User identifier")
     limit: int = Field(default=5, ge=1, le=20, description="Maximum number of memories to return")
 
 class MemorySearchResponse(BaseModel):
