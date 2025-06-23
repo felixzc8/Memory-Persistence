@@ -10,7 +10,6 @@ import jwt
 
 logger = logging.getLogger(__name__)
 
-# Simple UserResponse model for auth middleware
 class UserResponse(BaseModel):
     id: str
     email: str
@@ -19,7 +18,6 @@ class UserResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-# HTTP Bearer token security scheme
 security = HTTPBearer()
 
 # Initialize Supabase client for JWT verification

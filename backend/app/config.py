@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     
     # Mem0 Configuration
     mem0_collection_name: str = "memories"
-    memory_search_limit: int = 3
+    memory_search_limit: int = 50
     
     # API Configuration
     api_host: str = "0.0.0.0"
@@ -28,11 +28,4 @@ class Settings(BaseSettings):
         env_file = ".env"
 
 settings = Settings()
-
-# Backward compatibility for existing imports
-OPENAI_API_KEY = settings.openai_api_key
-MODEL_CHOICE = settings.model_choice
-DATABASE_URL = settings.database_url
-SUPABASE_URL = settings.supabase_url
-SUPABASE_KEY = settings.supabase_key
 

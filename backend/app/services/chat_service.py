@@ -22,7 +22,7 @@ class ChatService:
     async def chat_with_memory(
         self, 
         message: str, 
-        user_id: str = "default_user",
+        user_id: str,
         session_id: str = None
     ) -> ChatResponse:
         """
