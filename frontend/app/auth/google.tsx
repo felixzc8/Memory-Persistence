@@ -81,23 +81,8 @@ export default function GoogleAuth() {
                 <Ionicons name="logo-google" size={20} color="white" style={{ marginRight: 8 }} />
                 <Text className="text-white text-lg font-semibold">Continue with Google</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                className="bg-white border border-gray-300 rounded-xl py-4 px-6 items-center"
-                onPress={() => router.back()}
-                activeOpacity={0.8}
-              >
-                <Text className="text-gray-700 text-lg font-medium">Use Email Instead</Text>
-              </TouchableOpacity>
             </View>
           )}
-        </View>
-
-        {/* Note */}
-        <View className="items-center">
-          <Text className="text-xs text-gray-500 text-center max-w-sm">
-            Google OAuth requires additional setup. Please use email/password authentication for now.
-          </Text>
         </View>
       </View>
     </SafeAreaView>

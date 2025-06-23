@@ -33,7 +33,7 @@ export default function Landing() {
           {/* Features */}
           <View className="w-full max-w-sm space-y-4 mb-8">
             <FeatureItem 
-              icon="brain" 
+              icon="save-outline" 
               title="Persistent Memory" 
               description="Remembers your conversations across sessions"
             />
@@ -51,7 +51,7 @@ export default function Landing() {
         </View>
 
         {/* Action Buttons */}
-        <View className="space-y-4">
+        <View className="gap-2">
           <TouchableOpacity
             className="bg-blue-500 rounded-xl py-4 px-6 flex-row items-center justify-center shadow-lg"
             onPress={() => router.push('/auth/signin')}
@@ -68,7 +68,7 @@ export default function Landing() {
             <Text className="text-blue-500 text-lg font-semibold">Create Account</Text>
           </TouchableOpacity>
 
-          <View className="flex-row items-center my-6">
+          <View className="flex-row items-center">
             <View className="flex-1 h-px bg-gray-300" />
             <Text className="mx-4 text-gray-500 text-sm">or</Text>
             <View className="flex-1 h-px bg-gray-300" />
@@ -82,9 +82,6 @@ export default function Landing() {
             <Ionicons name="logo-google" size={20} color="white" style={{ marginRight: 8 }} />
             <Text className="text-white text-lg font-semibold">Continue with Google</Text>
           </TouchableOpacity>
-          <Text className="text-center text-xs text-gray-500 -mt-2">
-            Google OAuth temporarily unavailable - use email authentication
-          </Text>
         </View>
 
         {/* Footer */}
