@@ -5,7 +5,7 @@ from app.config import settings
 
 app = FastAPI(
     title="Homi Chatbot API",
-    description="A FastAPI backend for a persistent memory chatbot using OpenAI and Mem0 with Supabase authentication",
+    description="A FastAPI backend for a persistent memory chatbot using OpenAI and Mem0 with TiDB Serverless",
     version="1.0.0"
 )
 

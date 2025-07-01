@@ -9,15 +9,31 @@ class Settings(BaseSettings):
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     model_choice: str = os.getenv("MODEL_CHOICE", "gpt-4o-mini")
     
-    # Database Configuration
-    database_url: str = os.getenv("DATABASE_URL", "")
-    supabase_url: str = os.getenv("SUPABASE_URL", "")
-    supabase_key: str = os.getenv("SUPABASE_KEY", "")
-    supabase_jwt_secret: str = os.getenv("SUPABASE_JWT_SECRET", "")
+    # TiDB Configuration
+    tidb_host: str = os.getenv("TIDB_HOST", "")
+    tidb_port: int = int(os.getenv("TIDB_PORT", "4000"))
+    tidb_user: str = os.getenv("TIDB_USER", "")
+    tidb_password: str = os.getenv("TIDB_PASSWORD", "")
+    tidb_db_name: str = os.getenv("TIDB_DB_NAME", "")
+    
     
     # Mem0 Configuration
     mem0_collection_name: str = "memories"
     memory_search_limit: int = 50
+    
+    # TiDB Vector Configuration for Mem0
+    tidb_vector_table_name: str = "memory_vectors"
+    tidb_vector_distance_strategy: str = "cosine"  # "cosine" or "l2"
+    
+    @property
+    def tidb_connection_string(self) -> str:
+        """Construct TiDB connection string for SQLAlchemy"""
+        return f"mysql+pymysql://{self.tidb_user}:{self.tidb_password}@{self.tidb_host}:{self.tidb_port}/{self.tidb_db_name}?ssl_ca=/etc/ssl/cert.pem&ssl_verify_cert=true&ssl_verify_identity=true"
+    
+    @property
+    def tidb_vector_connection_string(self) -> str:
+        """Construct TiDB connection string for TiDB Vector Store"""
+        return f"mysql+pymysql://{self.tidb_user}:{self.tidb_password}@{self.tidb_host}:{self.tidb_port}/{self.tidb_db_name}"
     
     # API Configuration
     api_host: str = "0.0.0.0"

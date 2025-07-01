@@ -1,19 +1,19 @@
 from openai import OpenAI
 from mem0 import Memory
-from app.config import OPENAI_API_KEY, DATABASE_URL, SUPABASE_URL, SUPABASE_KEY, MODEL_CHOICE
+from app.config import settings
 
 config = {
     "llm": {
         "provider": "openai",
         "config": {
-            "model": MODEL_CHOICE,
+            "model": settings.model_choice,
         }
     },
     "vector_store": {
-        "provider": "supabase",
+        "provider": "qdrant",
         "config": {
-            "connection_string": DATABASE_URL,
-            "collection_name": "memories"
+            "collection_name": "memories",
+            "url": "http://localhost:6333"
         }
     }
 }
