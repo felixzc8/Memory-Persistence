@@ -78,7 +78,9 @@ class TiDBVectorStoreWithSearch(TiDBVectorStore):
         This method is called by mem0's delete() and update() methods
         """
         try:
-            logger.info(f"Delete operation requested for {len(ids)} documents: {ids}")
+            import traceback
+            logger.warning(f"DELETE METHOD CALLED! IDs: {ids}")
+            logger.warning(f"Call stack: {traceback.format_stack()}")
             
             if not ids:
                 logger.info("No IDs provided for deletion")
