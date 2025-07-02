@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     @property
     def tidb_vector_connection_string(self) -> str:
         """Construct TiDB connection string for TiDB Vector Store"""
-        return f"mysql+pymysql://{self.tidb_user}:{self.tidb_password}@{self.tidb_host}:{self.tidb_port}/{self.tidb_db_name}"
+        return f"mysql+pymysql://{self.tidb_user}:{self.tidb_password}@{self.tidb_host}:{self.tidb_port}/{self.tidb_db_name}?ssl_ca=/etc/ssl/cert.pem&ssl_verify_cert=true&ssl_verify_identity=true"
     
     # API Configuration
     api_host: str = "0.0.0.0"

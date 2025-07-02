@@ -64,4 +64,4 @@ yarl==1.20.1
 langchain==0.3.12
 langchain-community==0.3.12
 langchain-openai==0.2.14
-tidb-vector==0.1.7
+tidb-vector==0.0.14

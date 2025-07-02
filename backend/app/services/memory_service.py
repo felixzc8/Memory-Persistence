@@ -42,7 +42,7 @@ class MemoryService:
                         "provider": "langchain",
                         "config": {
                             "collection_name": settings.mem0_collection_name,
-                            "vector_store_instance": self.tidb_vector_store
+                            "client": self.tidb_vector_store
                         }
                     }
                 }

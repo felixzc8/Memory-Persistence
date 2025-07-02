@@ -9,6 +9,7 @@ from app.schemas.chat import (
 )
 from app.services.chat_service import chat_service
 from app.services.memory_service import memory_service
+from app.services.user_service import user_service
 import logging
 from typing import List
 
@@ -21,6 +22,16 @@ async def chat_endpoint(request: ChatRequest):
     Main chat endpoint that processes user messages with memory context
     """
     try:
+        # Check/create user in database
+        user = user_service.get_or_create_user(request.user_id)
+        if not user:
+            logger.warning(f"Failed to get or create user: {request.user_id}")
+            # Continue with chat even if user creation fails
+        else:
+            # Update user activity timestamp
+            user_service.update_user_activity(request.user_id)
+            logger.info(f"User {request.user_id} authenticated/created successfully")
+        
         response = await chat_service.chat_with_memory(
             message=request.message,
             user_id=request.user_id,
@@ -84,16 +95,20 @@ async def delete_user_memories(user_id: str):
 @router.get("/health")
 async def health_check():
     """
-    Health check endpoint for the chat service with TiDB Vector status
+    Health check endpoint for the chat service with TiDB Vector and database status
     """
     try:
         # Check TiDB Vector Store health
         vector_health = memory_service.get_vector_store_health()
         
+        # Check database health
+        db_health = user_service.get_database_health()
+        
         return {
             "status": "healthy",
             "service": "chat",
             "vector_store": vector_health,
+            "database": db_health,
             "timestamp": "2024-01-01T00:00:00Z"
         }
     except Exception as e:
