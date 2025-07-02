@@ -6,6 +6,8 @@ import logging
 from langchain_community.vectorstores import TiDBVectorStore
 from langchain_openai import OpenAIEmbeddings
 from langchain_core.documents import Document
+import pymysql
+from urllib.parse import urlparse, parse_qs
 
 logger = logging.getLogger(__name__)
 
@@ -72,19 +74,40 @@ class TiDBVectorStoreWithSearch(TiDBVectorStore):
     
     def delete(self, ids: List[str]) -> None:
         """
-        Delete documents by IDs - required for Mem0's Langchain wrapper
+        Delete documents by IDs using SQL DELETE statements
         This method is called by mem0's delete() and update() methods
-        
-        Note: TiDB Vector Store doesn't support native delete by ID operations.
-        This is a known limitation of the current TiDB Vector implementation.
         """
         try:
             logger.info(f"Delete operation requested for {len(ids)} documents: {ids}")
-            logger.warning("TiDB Vector Store does not support delete by ID - memories will accumulate")
-            # We don't raise an exception to avoid breaking mem0's flow
-            # In a production system, you might want to implement a cleanup mechanism
+            
+            if not ids:
+                logger.info("No IDs provided for deletion")
+                return
+                
+            # Use the TiDB vector client's execute method for SQL operations
+            client = self.tidb_vector_client
+            
+            deleted_count = 0
+            
+            # Delete documents by their hash values stored in meta JSON
+            table_name = client._table_name
+            for doc_id in ids:
+                # Use client.execute() to run DELETE SQL command
+                delete_query = f"DELETE FROM {table_name} WHERE JSON_EXTRACT(meta, '$.hash') = :hash"
+                result = client.execute(delete_query, {"hash": doc_id})
+                
+                if result.get('success', False):
+                    rows_affected = result.get('result', 0)
+                    deleted_count += rows_affected
+                    logger.info(f"Deleted {rows_affected} rows for hash {doc_id}")
+                else:
+                    error_msg = result.get('error', 'Unknown error')
+                    logger.error(f"Failed to delete hash {doc_id}: {error_msg}")
+            
+            logger.info(f"Successfully deleted {deleted_count} documents from {table_name}")
+                
         except Exception as e:
-            logger.error(f"Error in delete method: {e}")
+            logger.error(f"Error in SQL-based delete method: {e}")
             # Don't raise exception to maintain mem0 compatibility
 
 class MemoryService:
