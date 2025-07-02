@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     
     
     # Mem0 Configuration
-    mem0_collection_name: str = "memories"
+    mem0_collection_name: str = "mem0"
     memory_search_limit: int = 50
     
     # TiDB Vector Configuration for Mem0

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Homi Chatbot FastAPI Application Runner
+FastAPI Application Runner
 """
 
 import uvicorn
