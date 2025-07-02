@@ -109,6 +109,91 @@ class TiDBVectorStoreWithSearch(TiDBVectorStore):
         except Exception as e:
             logger.error(f"Error in SQL-based delete method: {e}")
             # Don't raise exception to maintain mem0 compatibility
+    
+    def update(self, ids: List[str], documents: List[Document]) -> None:
+        """
+        Update documents by replacing old documents with new ones
+        This method is called by mem0's update operations to replace existing memories
+        
+        Args:
+            ids: List of document IDs to replace
+            documents: List of new documents to add
+        """
+        try:
+            logger.info(f"Update operation requested for {len(ids)} documents")
+            
+            if not ids and not documents:
+                logger.info("No IDs or documents provided for update")
+                return
+            
+            # Step 1: Delete old documents if IDs are provided
+            if ids:
+                logger.info(f"Deleting {len(ids)} old documents: {ids}")
+                self.delete(ids)
+            
+            # Step 2: Add new documents if provided
+            if documents:
+                logger.info(f"Adding {len(documents)} new documents")
+                # Prepare texts and metadata for insertion
+                texts = [doc.page_content for doc in documents]
+                metadatas = [doc.metadata for doc in documents]
+                
+                # Use the add_texts method to insert new documents
+                new_ids = self.add_texts(texts=texts, metadatas=metadatas)
+                logger.info(f"Successfully added {len(new_ids)} new documents with IDs: {new_ids}")
+            
+            logger.info("Update operation completed successfully")
+                
+        except Exception as e:
+            logger.error(f"Error in update method: {e}")
+            # Don't raise exception to maintain mem0 compatibility
+    
+    def upsert(self, ids: List[str], documents: List[Document]) -> List[str]:
+        """
+        Upsert (insert or update) documents
+        This method handles both inserting new documents and updating existing ones
+        
+        Args:
+            ids: List of document IDs 
+            documents: List of documents to upsert
+            
+        Returns:
+            List of document IDs that were upserted
+        """
+        try:
+            logger.info(f"Upsert operation requested for {len(documents)} documents")
+            
+            if not documents:
+                logger.info("No documents provided for upsert")
+                return []
+            
+            # For upsert, we'll delete any existing documents with the given IDs
+            # and then insert the new documents
+            if ids:
+                # Check which IDs actually exist before deleting
+                existing_docs = self.get_by_ids(ids)
+                existing_ids = [doc.id for doc in existing_docs if hasattr(doc, 'id')]
+                
+                if existing_ids:
+                    logger.info(f"Deleting {len(existing_ids)} existing documents for upsert")
+                    self.delete(existing_ids)
+            
+            # Insert the new documents
+            texts = [doc.page_content for doc in documents]
+            metadatas = [doc.metadata for doc in documents]
+            
+            # If specific IDs were provided, try to use them
+            document_ids = ids[:len(documents)] if ids and len(ids) >= len(documents) else None
+            
+            new_ids = self.add_texts(texts=texts, metadatas=metadatas, ids=document_ids)
+            logger.info(f"Successfully upserted {len(new_ids)} documents with IDs: {new_ids}")
+            
+            return new_ids
+                
+        except Exception as e:
+            logger.error(f"Error in upsert method: {e}")
+            # Don't raise exception to maintain mem0 compatibility
+            return []
 
 class MemoryService:
     """Service for managing persistent memory using Mem0 and TiDB Vector"""
