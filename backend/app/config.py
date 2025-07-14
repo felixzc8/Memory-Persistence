@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 import os
+from typing import Optional
 from pydantic_settings import BaseSettings
 
 load_dotenv()
@@ -16,12 +17,17 @@ class Settings(BaseSettings):
     tidb_password: str = os.getenv("TIDB_PASSWORD", "")
     tidb_db_name: str = os.getenv("TIDB_DB_NAME", "")
     
+    # TiDB Native Provider Configuration
+    tidb_use_ssl: bool = True
+    tidb_verify_cert: bool = True
+    tidb_ssl_ca: Optional[str] = "/etc/ssl/cert.pem"
+    embedding_model_dims: int = 1536  # OpenAI text-embedding-3-small dimensions
     
     # Mem0 Configuration
     mem0_collection_name: str = "mem0"
     memory_search_limit: int = 50
     
-    # TiDB Vector Configuration for Mem0
+    # Legacy TiDB Vector Configuration (for backward compatibility)
     tidb_vector_table_name: str = "memory_vectors"
     tidb_vector_distance_strategy: str = "cosine"  # "cosine" or "l2"
     

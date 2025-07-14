@@ -97,7 +97,7 @@ class ChatService:
     
     def _create_system_prompt(self, memories_context: str) -> str:
         """Create system prompt with memory context"""
-        return f"""You are Homi, a helpful and friendly assistant with persistent memory. 
+        return f"""You are a helpful and friendly assistant with persistent memory. 
         
 Answer the user's question based on the conversation context and their memories.
 Be conversational, helpful, and remember to use the provided memories when relevant.
