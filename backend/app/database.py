@@ -31,22 +31,30 @@ class Message(Base):
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     
     conversation = relationship("Conversation", back_populates="messages")
-engine = create_engine(
-    settings.tidb_connection_string,
-    echo=settings.debug,
-    pool_pre_ping=True,
-    pool_recycle=3600
-)
+try:
+    logger.info(f"Connecting to database: {settings.tidb_host}:{settings.tidb_port}")
+    engine = create_engine(
+        settings.tidb_connection_string,
+        echo=settings.debug,
+        pool_pre_ping=True,
+        pool_recycle=3600
+    )
+    logger.info("Database engine created successfully")
+except Exception as e:
+    logger.error(f"Failed to create database engine: {e}")
+    raise
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def create_tables():
     """Create database tables"""
     try:
+        logger.info("Creating database tables...")
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully")
     except Exception as e:
         logger.error(f"Error creating database tables: {e}")
+        logger.error(f"Connection string host: {settings.tidb_host}:{settings.tidb_port}")
         raise
 
 def get_db():

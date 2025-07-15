@@ -11,9 +11,12 @@ class MemoryService:
     
     def __init__(self):
         self.memory = None
+        self.initialization_error = None
         
         if settings.openai_api_key and settings.tidb_host:
             try:
+                logger.info(f"Initializing memory service with TiDB: {settings.tidb_host}:{settings.tidb_port}")
+                
                 self.config = {
                     "llm": {
                         "provider": "openai",
@@ -48,18 +51,34 @@ class MemoryService:
                 
                 self.memory = Memory.from_config(self.config)
                 logger.info("Memory service initialized successfully with native TiDB Vector")
+                
+            except ImportError as e:
+                self.initialization_error = f"Missing dependency: {str(e)}"
+                logger.error(f"Memory service import error: {self.initialization_error}")
+                
+            except ConnectionError as e:
+                self.initialization_error = f"Database connection failed: {str(e)}"
+                logger.error(f"Memory service connection error: {self.initialization_error}")
+                
+            except ssl.SSLError as e:
+                self.initialization_error = f"SSL connection failed: {str(e)}"
+                logger.error(f"Memory service SSL error: {self.initialization_error}")
+                
             except Exception as e:
-                logger.error(f"Failed to initialize memory service with native TiDB Vector: {e}")
+                self.initialization_error = f"Initialization failed: {str(e)}"
+                logger.error(f"Memory service error: {self.initialization_error}")
                 import traceback
                 logger.error(f"Full traceback: {traceback.format_exc()}")
-                self.memory = None
+                
         else:
-            logger.warning("Memory service not initialized - missing OpenAI API key or TiDB configuration")
+            self.initialization_error = "Missing OpenAI API key or TiDB configuration"
+            logger.error(f"Memory service not initialized: {self.initialization_error}")
     
     def search_memories(self, query: str, user_id: str, limit: int = None) -> List[Dict[str, Any]]:
         """Search for relevant memories based on query"""
         if not self.memory:
-            logger.warning("Memory service not initialized")
+            error_msg = f"Memory service not initialized: {self.initialization_error or 'Unknown error'}"
+            logger.warning(error_msg)
             return []
             
         try:
@@ -73,7 +92,8 @@ class MemoryService:
     def add_memory(self, messages: List[Dict[str, str]], user_id: str) -> bool:
         """Add conversation to memory"""
         if not self.memory:
-            logger.warning("Memory service not initialized")
+            error_msg = f"Memory service not initialized: {self.initialization_error or 'Unknown error'}"
+            logger.warning(error_msg)
             return False
             
         try:
@@ -96,7 +116,8 @@ class MemoryService:
     def delete_memories(self, user_id: str) -> bool:
         """Delete all memories for a user"""
         if not self.memory:
-            logger.warning("Memory service not initialized")
+            error_msg = f"Memory service not initialized: {self.initialization_error or 'Unknown error'}"
+            logger.warning(error_msg)
             return False
             
         try:
@@ -110,7 +131,8 @@ class MemoryService:
     def get_vector_store_health(self) -> Dict[str, Any]:
         """Check native TiDB Vector Store health"""
         if not self.memory:
-            return {"status": "unhealthy", "message": "Memory service not initialized"}
+            error_msg = f"Memory service not initialized: {self.initialization_error or 'Unknown error'}"
+            return {"status": "unhealthy", "message": error_msg}
         
         try:
             vector_store_config = self.config.get("vector_store", {}).get("config", {})
