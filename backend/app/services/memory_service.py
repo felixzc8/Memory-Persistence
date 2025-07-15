@@ -13,7 +13,6 @@ class MemoryService:
         
         if settings.openai_api_key and settings.tidb_host:
             try:
-                # Configure Mem0 to use native TiDB provider
                 self.config = {
                     "llm": {
                         "provider": "openai",
@@ -98,7 +97,6 @@ class MemoryService:
             return False
             
         try:
-            # Use Mem0's delete method to remove all memories for a user
             self.memory.delete_all(user_id=user_id)
             logger.info(f"Deleted memories for user {user_id}")
             return True
@@ -112,7 +110,6 @@ class MemoryService:
             return {"status": "unhealthy", "message": "Memory service not initialized"}
         
         try:
-            # Access the native TiDB vector store through mem0's configuration
             vector_store_config = self.config.get("vector_store", {}).get("config", {})
             collection_info = {
                 "provider": "tidb_native",
@@ -133,5 +130,4 @@ class MemoryService:
                 "message": f"Native TiDB Vector Store error: {str(e)}"
             }
 
-# Singleton instance
 memory_service = MemoryService() 

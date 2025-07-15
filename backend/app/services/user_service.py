@@ -19,7 +19,6 @@ class UserService:
         
         if settings.tidb_host:
             try:
-                # Create database engine
                 self.engine = create_engine(
                     settings.tidb_connection_string,
                     pool_pre_ping=True,
@@ -27,14 +26,12 @@ class UserService:
                     echo=settings.debug
                 )
                 
-                # Create session factory
                 self.SessionLocal = sessionmaker(
                     autocommit=False,
                     autoflush=False,
                     bind=self.engine
                 )
                 
-                # Create tables if they don't exist
                 self._create_tables()
                 
                 logger.info("User service initialized successfully")
@@ -82,13 +79,11 @@ class UserService:
         
         try:
             with self.get_db_session() as db:
-                # Check if user already exists
                 existing_user = db.query(User).filter(User.user_id == user_data.user_id).first()
                 if existing_user:
                     logger.info(f"User {user_data.user_id} already exists")
                     return existing_user
                 
-                # Create new user
                 new_user = User(
                     user_id=user_data.user_id,
                     created_at=datetime.now(timezone.utc),
@@ -114,12 +109,10 @@ class UserService:
             return None
         
         try:
-            # First try to get existing user
             user = self.get_user_by_id(user_id)
             if user:
                 return user
             
-            # Create new user if not exists
             user_data = UserCreate(user_id=user_id)
             return self.create_user(user_data)
             
@@ -153,19 +146,17 @@ class UserService:
         
         try:
             with self.engine.connect() as connection:
-                # Test basic connectivity
                 result = connection.execute(text("SELECT 1"))
                 result.fetchone()
                 
-                # Check if users table exists
                 result = connection.execute(text("SHOW TABLES LIKE 'users'"))
                 table_exists = result.fetchone() is not None
                 
                 return {
-                    "status": "healthy",
-                    "database": "tidb",
-                    "users_table_exists": table_exists,
-                    "connection_string": settings.tidb_connection_string.split('@')[1]  # Hide credentials
+                                "status": "healthy",
+            "database": "tidb",
+            "users_table_exists": table_exists,
+            "connection_string": settings.tidb_connection_string.split('@')[1]
                 }
         except Exception as e:
             return {
@@ -173,5 +164,4 @@ class UserService:
                 "message": f"Database error: {str(e)}"
             }
 
-# Singleton instance
 user_service = UserService()

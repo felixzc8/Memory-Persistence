@@ -15,7 +15,6 @@ from urllib.parse import urlparse, parse_qs
 def check_database():
     """Check what's in the database"""
     try:
-        # Parse connection string
         connection_string = settings.tidb_vector_connection_string
         if connection_string.startswith("mysql+pymysql://"):
             connection_string = connection_string.replace("mysql+pymysql://", "mysql://")
@@ -28,7 +27,6 @@ def check_database():
         password = parsed.password
         database = parsed.path.lstrip('/')
         
-        # Parse SSL params
         ssl_params = {}
         if parsed.query:
             query_params = parse_qs(parsed.query)
@@ -38,8 +36,6 @@ def check_database():
                 ssl_params['ssl_verify_cert'] = query_params['ssl_verify_cert'][0] == 'true'
             if 'ssl_verify_identity' in query_params:
                 ssl_params['ssl_verify_identity'] = query_params['ssl_verify_identity'][0] == 'true'
-        
-        # Connect to database
         connection = pymysql.connect(
             host=host,
             port=port,
@@ -50,7 +46,6 @@ def check_database():
         )
         
         with connection.cursor() as cursor:
-            # Check what's in the mem0 table for test_user
             cursor.execute("SELECT id, document, meta FROM mem0 WHERE JSON_EXTRACT(meta, '$.user_id') = 'test_user'")
             results = cursor.fetchall()
             

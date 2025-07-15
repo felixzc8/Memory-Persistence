@@ -14,7 +14,6 @@ from urllib.parse import urlparse, parse_qs
 def check_api_user():
     """Check what's in the database for debug_user_api"""
     try:
-        # Parse connection string
         connection_string = settings.tidb_vector_connection_string
         if connection_string.startswith("mysql+pymysql://"):
             connection_string = connection_string.replace("mysql+pymysql://", "mysql://")
@@ -26,8 +25,6 @@ def check_api_user():
         user = parsed.username
         password = parsed.password
         database = parsed.path.lstrip('/')
-        
-        # Parse SSL params
         ssl_params = {}
         if parsed.query:
             query_params = parse_qs(parsed.query)
@@ -38,7 +35,6 @@ def check_api_user():
             if 'ssl_verify_identity' in query_params:
                 ssl_params['ssl_verify_identity'] = query_params['ssl_verify_identity'][0] == 'true'
         
-        # Connect to database
         connection = pymysql.connect(
             host=host,
             port=port,
@@ -49,7 +45,6 @@ def check_api_user():
         )
         
         with connection.cursor() as cursor:
-            # Check what's in the mem0 table for debug_user_api
             cursor.execute("SELECT id, document, meta FROM mem0 WHERE JSON_EXTRACT(meta, '$.user_id') = 'debug_user_api'")
             results = cursor.fetchall()
             

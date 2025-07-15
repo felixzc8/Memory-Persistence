@@ -8,10 +8,8 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
     create_tables()
     yield
-    # Shutdown
     pass
 
 app = FastAPI(
@@ -21,17 +19,13 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware for frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure this properly for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-# Include routers
 app.include_router(chat_router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
 

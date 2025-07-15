@@ -36,7 +36,6 @@ function Chat({ username, userId, onSignout }) {
     }
   }, [isLoading, isStreaming]);
 
-  // Load user sessions on mount
   useEffect(() => {
     const initializeUser = async () => {
       try {
@@ -45,13 +44,11 @@ function Chat({ username, userId, onSignout }) {
           const data = await response.json();
           setSessions(data.sessions);
           
-          // If user has sessions, load the most recent one
           if (data.sessions.length > 0) {
-            const mostRecent = data.sessions[0]; // Already sorted by last_activity
+            const mostRecent = data.sessions[0];
             setCurrentSessionId(mostRecent.session_id);
             await loadSessionMessages(mostRecent.session_id);
           } else {
-            // Only set default welcome messages if no sessions exist
             setMessages([
               {
                 type: 'system',
@@ -66,7 +63,6 @@ function Chat({ username, userId, onSignout }) {
             ]);
           }
         } else {
-          // Fallback to default messages if API fails
           setMessages([
             {
               type: 'system',
@@ -82,7 +78,6 @@ function Chat({ username, userId, onSignout }) {
         }
       } catch (error) {
         console.error('Error loading sessions:', error);
-        // Fallback to default messages
         setMessages([
           {
             type: 'system',
@@ -152,10 +147,7 @@ function Chat({ username, userId, onSignout }) {
 
   const createNewSession = async () => {
     try {
-      // Reset current session state
-      setCurrentSessionId(null);
-      
-      // Reset messages for new session
+          setCurrentSessionId(null);
       setMessages([
         {
           type: 'system',
@@ -167,9 +159,7 @@ function Chat({ username, userId, onSignout }) {
           content: `Starting new chat session...`,
           timestamp: new Date()
         }
-      ]);
-      
-      // Session will be created automatically when first message is sent
+          ]);
       console.log('Ready for new session - will be created on first message');
     } catch (error) {
       console.error('Error creating new session:', error);

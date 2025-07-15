@@ -29,7 +29,6 @@ class SessionService:
         try:
             conversation_id = str(uuid.uuid4())
             
-            # Generate title from first message or use default
             if not title:
                 title = f"Conversation {datetime.now(timezone.utc).strftime('%b %d, %Y')}"
             
@@ -69,12 +68,10 @@ class SessionService:
             if not conversation:
                 return None
             
-            # Get messages for this conversation
             messages_query = db.query(Message).filter(
                 Message.conversation_id == session_id
             ).order_by(Message.created_at).all()
             
-            # Convert to SessionMessage objects
             messages = [
                 SessionMessage(
                     role=msg.role,
@@ -90,7 +87,7 @@ class SessionService:
                 messages=messages,
                 created_at=conversation.created_at,
                 last_activity=conversation.last_updated,
-                is_active=True,  # Always active for now
+                is_active=True,
                 message_count=len(messages)
             )
         except Exception as e:
@@ -103,7 +100,6 @@ class SessionService:
         """Get list of user's conversations (summaries only)"""
         db = next(get_db())
         try:
-            # Get conversations with message counts
             conversations = db.query(
                 Conversation.id,
                 Conversation.user_id,
@@ -114,7 +110,6 @@ class SessionService:
             
             summaries = []
             for conv in conversations:
-                # Count messages for each conversation
                 message_count = db.query(Message).filter(
                     Message.conversation_id == conv.id
                 ).count()
@@ -126,7 +121,7 @@ class SessionService:
                     created_at=conv.created_at,
                     last_activity=conv.last_updated,
                     message_count=message_count,
-                    is_active=True  # Always active for now
+                    is_active=True
                 ))
             
             return summaries
@@ -140,7 +135,6 @@ class SessionService:
         """Add message to conversation"""
         db = next(get_db())
         try:
-            # Check if conversation exists
             conversation = db.query(Conversation).filter(
                 Conversation.id == session_id
             ).first()
@@ -149,13 +143,11 @@ class SessionService:
                 logger.warning(f"Conversation {session_id} not found")
                 return False
             
-            # Handle message rotation if needed
             current_count = db.query(Message).filter(
                 Message.conversation_id == session_id
             ).count()
             
             if current_count >= self.max_messages:
-                # Remove oldest messages to keep within limit
                 oldest_messages = db.query(Message).filter(
                     Message.conversation_id == session_id
                 ).order_by(Message.created_at).limit(current_count - self.max_messages + 1).all()
@@ -164,7 +156,6 @@ class SessionService:
                     db.delete(msg)
                 logger.info(f"Rotated messages for conversation {session_id}")
             
-            # Create new message
             message = Message(
                 id=str(uuid.uuid4()),
                 conversation_id=session_id,
@@ -174,7 +165,6 @@ class SessionService:
             
             db.add(message)
             
-            # Update conversation last_updated timestamp
             conversation.last_updated = datetime.now(timezone.utc)
             
             db.commit()
@@ -227,7 +217,6 @@ class SessionService:
             if not conversation:
                 return False
             
-            # Messages will be deleted automatically due to CASCADE
             db.delete(conversation)
             db.commit()
             
@@ -247,12 +236,9 @@ class SessionService:
         if not session:
             return []
         
-        # Limit messages if specified
         messages = session.messages
         if limit and len(messages) > limit:
             messages = messages[-limit:]
-        
-        # Format for OpenAI API
         return [
             {
                 "role": msg.role,
@@ -263,16 +249,13 @@ class SessionService:
     
     def generate_session_title(self, first_message: str) -> str:
         """Generate a session title from the first message"""
-        # Truncate and clean up the message for title
         title = first_message.strip()[:50]
         if len(first_message) > 50:
             title += "..."
         
-        # Remove newlines and clean up
         title = " ".join(title.split())
         
         return title if title else f"Conversation {datetime.now(timezone.utc).strftime('%b %d')}"
     
 
-# Singleton instance
 session_service = SessionService()

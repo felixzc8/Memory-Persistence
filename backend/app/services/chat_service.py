@@ -39,21 +39,16 @@ class ChatService:
             SSE-formatted strings with streaming response chunks
         """
         try:
-            # Create session if none provided
             if not session_id:
-                # Auto-generate title from first message
                 title = session_service.generate_session_title(message)
                 session_response = session_service.create_session(user_id, title)
                 session_id = session_response.session_id
                 logger.info(f"Created new session {session_id} for user {user_id}")
                 
-                # Send session creation event
                 yield f"event: session_created\ndata: {json.dumps({'session_id': session_id, 'title': title})}\n\n"
             
-            # Get session context (recent conversation history)
             session_context = session_service.get_session_context(session_id, limit=15)
             
-            # Get relevant long-term memories
             memories = memory_service.search_memories(
                 query=message, 
                 user_id=user_id, 
@@ -63,25 +58,15 @@ class ChatService:
             memories_context = self._format_memory_context(memories)
             memories_used = [mem['memory'] for mem in memories]
             
-            # Send memories event
             yield f"event: memories_loaded\ndata: {json.dumps({'count': len(memories_used)})}\n\n"
             
-            # Create system prompt with memory context
             system_prompt = self._create_system_prompt(memories_context)
             
-            # Prepare messages for OpenAI with session context
             messages = [{"role": "system", "content": system_prompt}]
-            
-            # Add session context (conversation history)
             messages.extend(session_context)
-            
-            # Add current user message
             messages.append({"role": "user", "content": message})
             
-            # Save user message to session
             session_service.add_message_to_session(session_id, "user", message)
-            
-            # Stream response from OpenAI
             full_response = ""
             
             stream = self.client.chat.completions.create(
@@ -96,13 +81,9 @@ class ChatService:
                 if chunk.choices[0].delta.content is not None:
                     content = chunk.choices[0].delta.content
                     full_response += content
-                    # Send content chunk
                     yield f"event: content\ndata: {json.dumps({'content': content})}\n\n"
             
-            # Save assistant response to session
             session_service.add_message_to_session(session_id, "assistant", full_response)
-            
-            # Save conversation to long-term memory
             conversation_messages = [
                 {"role": "user", "content": message},
                 {"role": "assistant", "content": full_response}
@@ -110,7 +91,6 @@ class ChatService:
             
             memory_service.add_memory(conversation_messages, user_id)
             
-            # Send completion event with metadata
             completion_data = {
                 'session_id': session_id,
                 'memories_used': memories_used,
@@ -141,40 +121,28 @@ class ChatService:
             ChatResponse with assistant's response and metadata
         """
         try:
-            # Create session if none provided
             if not session_id:
-                # Auto-generate title from first message
                 title = session_service.generate_session_title(message)
                 session_response = session_service.create_session(user_id, title)
                 session_id = session_response.session_id
                 logger.info(f"Created new session {session_id} for user {user_id}")
             
-            # Get session context (recent conversation history)
             session_context = session_service.get_session_context(session_id, limit=15)
             
-            # Get relevant long-term memories
             memories = memory_service.search_memories(
                 query=message, 
                 user_id=user_id, 
-                limit=5  # Reduced since we have session context
+                limit=5
             )
             
             memories_context = self._format_memory_context(memories)
             memories_used = [mem['memory'] for mem in memories]
             
-            # Create system prompt with memory context
             system_prompt = self._create_system_prompt(memories_context)
             
-            # Prepare messages for OpenAI with session context
             messages = [{"role": "system", "content": system_prompt}]
-            
-            # Add session context (conversation history)
             messages.extend(session_context)
-            
-            # Add current user message
             messages.append({"role": "user", "content": message})
-            
-            # Get response from OpenAI
             response = self.client.chat.completions.create(
                 model=settings.model_choice,
                 messages=messages,
@@ -184,11 +152,8 @@ class ChatService:
             
             assistant_response = response.choices[0].message.content
             
-            # Save both user message and assistant response to session
             session_service.add_message_to_session(session_id, "user", message)
             session_service.add_message_to_session(session_id, "assistant", assistant_response)
-            
-            # Save conversation to long-term memory (less frequently than before)
             conversation_messages = [
                 {"role": "user", "content": message},
                 {"role": "assistant", "content": assistant_response}
@@ -276,5 +241,4 @@ Guidelines:
             logger.error(f"Error getting conversation summary for user {user_id}: {e}")
             return "Unable to generate conversation summary."
 
-# Singleton instance
 chat_service = ChatService() 

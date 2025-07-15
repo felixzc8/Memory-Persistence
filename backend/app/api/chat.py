@@ -5,11 +5,8 @@ from app.schemas.chat import (
     ChatResponse, 
     MemorySearchRequest, 
     MemorySearchResponse,
-    ErrorResponse
 )
 from app.schemas.session import (
-    CreateSessionRequest,
-    CreateSessionResponse,
     Session,
     SessionSummary,
     SessionListResponse,
@@ -25,18 +22,15 @@ from typing import List
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Chat Endpoints
 @router.post("/{user_id}/new", response_model=ChatResponse)
 async def new_chat_session(user_id: str, request: ChatRequest):
     """
     Create new session and send first message
     """
     try:
-        # Validate user_id matches request
         if request.user_id != user_id:
             raise HTTPException(status_code=400, detail="User ID mismatch")
         
-        # Check/create user in database
         user = user_service.get_or_create_user(user_id)
         if not user:
             logger.warning(f"Failed to get or create user: {user_id}")
@@ -44,11 +38,10 @@ async def new_chat_session(user_id: str, request: ChatRequest):
             user_service.update_user_activity(user_id)
             logger.info(f"User {user_id} authenticated/created successfully")
         
-        # Chat service will create new session automatically when session_id is None
         response = await chat_service.chat_with_memory(
             message=request.message,
             user_id=user_id,
-            session_id=None  # Force new session creation
+            session_id=None
         )
         return response
     except Exception as e:
@@ -61,18 +54,15 @@ async def continue_chat_session(user_id: str, session_id: str, request: ChatRequ
     Continue conversation in existing session
     """
     try:
-        # Validate user_id matches request
         if request.user_id != user_id:
             raise HTTPException(status_code=400, detail="User ID mismatch")
         
-        # Validate session exists and belongs to user
         session = session_service.get_session(session_id)
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
         if session.user_id != user_id:
             raise HTTPException(status_code=403, detail="Session does not belong to user")
         
-        # Check/create user in database
         user = user_service.get_or_create_user(user_id)
         if not user:
             logger.warning(f"Failed to get or create user: {user_id}")
@@ -92,7 +82,6 @@ async def continue_chat_session(user_id: str, session_id: str, request: ChatRequ
         logger.error(f"Error in chat session {session_id} for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-# Session Management Endpoints
 @router.get("/{user_id}/sessions", response_model=SessionListResponse)
 async def get_user_sessions(user_id: str):
     """
@@ -133,7 +122,6 @@ async def update_user_session(user_id: str, session_id: str, request: UpdateSess
     Update session metadata with user validation
     """
     try:
-        # Validate session belongs to user
         session = session_service.get_session(session_id)
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
@@ -156,7 +144,6 @@ async def delete_user_session(user_id: str, session_id: str):
     Delete session with user validation
     """
     try:
-        # Validate session belongs to user
         session = session_service.get_session(session_id)
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
@@ -173,14 +160,12 @@ async def delete_user_session(user_id: str, session_id: str):
         logger.error(f"Error deleting session {session_id} for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to delete session: {str(e)}")
 
-# Memory Management Endpoints
 @router.post("/{user_id}/memories/search", response_model=MemorySearchResponse)
 async def search_user_memories(user_id: str, request: MemorySearchRequest):
     """
     Search through user's memories
     """
     try:
-        # Validate user_id matches request
         if request.user_id != user_id:
             raise HTTPException(status_code=400, detail="User ID mismatch")
         
@@ -230,17 +215,13 @@ async def delete_user_memories(user_id: str):
         logger.error(f"Error deleting memories for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to delete memories: {str(e)}")
 
-# Utility Endpoints
 @router.get("/health")
 async def health_check():
     """
     Health check endpoint for the chat service with TiDB Vector and database status
     """
     try:
-        # Check TiDB Vector Store health
         vector_health = memory_service.get_vector_store_health()
-        
-        # Check database health
         db_health = user_service.get_database_health()
         
         return {
@@ -254,18 +235,15 @@ async def health_check():
         logger.error(f"Health check failed: {e}")
         raise HTTPException(status_code=503, detail="Service unhealthy")
 
-# Streaming chat endpoints
 @router.post("/{user_id}/new/stream")
 async def new_chat_session_stream(user_id: str, request: ChatRequest):
     """
     Streaming chat endpoint for new sessions using Server-Sent Events
     """
     try:
-        # Validate user_id matches request
         if request.user_id != user_id:
             raise HTTPException(status_code=400, detail="User ID mismatch")
         
-        # Check/create user in database
         user = user_service.get_or_create_user(user_id)
         if not user:
             logger.warning(f"Failed to get or create user: {user_id}")
@@ -273,11 +251,10 @@ async def new_chat_session_stream(user_id: str, request: ChatRequest):
             user_service.update_user_activity(user_id)
             logger.info(f"User {user_id} authenticated/created successfully")
         
-        # Use streaming chat service
         stream_generator = chat_service.chat_with_memory_stream(
             message=request.message,
             user_id=user_id,
-            session_id=None  # Force new session creation
+            session_id=None
         )
         
         return StreamingResponse(
@@ -300,18 +277,15 @@ async def continue_chat_session_stream(user_id: str, session_id: str, request: C
     Streaming chat endpoint for existing sessions using Server-Sent Events
     """
     try:
-        # Validate user_id matches request
         if request.user_id != user_id:
             raise HTTPException(status_code=400, detail="User ID mismatch")
         
-        # Validate session exists and belongs to user
         session = session_service.get_session(session_id)
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
         if session.user_id != user_id:
             raise HTTPException(status_code=403, detail="Session does not belong to user")
         
-        # Check/create user in database
         user = user_service.get_or_create_user(user_id)
         if not user:
             logger.warning(f"Failed to get or create user: {user_id}")
@@ -319,7 +293,6 @@ async def continue_chat_session_stream(user_id: str, session_id: str, request: C
             user_service.update_user_activity(user_id)
             logger.info(f"User {user_id} authenticated/created successfully")
         
-        # Use streaming chat service
         stream_generator = chat_service.chat_with_memory_stream(
             message=request.message,
             user_id=user_id,

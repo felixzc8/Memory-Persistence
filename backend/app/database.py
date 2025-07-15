@@ -18,7 +18,6 @@ class Conversation(Base):
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     last_updated = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
     
-    # Relationship to messages
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
 
 class Message(Base):
@@ -31,10 +30,7 @@ class Message(Base):
     message_metadata = Column(JSON, nullable=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     
-    # Relationship to conversation
     conversation = relationship("Conversation", back_populates="messages")
-
-# Database connection
 engine = create_engine(
     settings.tidb_connection_string,
     echo=settings.debug,
