@@ -29,10 +29,6 @@ class Settings(BaseSettings):
     mem0_collection_name: str = "mem0"
     memory_search_limit: int = 50
     
-    # Legacy TiDB Vector Configuration (for backward compatibility)
-    tidb_vector_table_name: str = "memory_vectors"
-    tidb_vector_distance_strategy: str = "cosine"  # "cosine" or "l2"
-    
     @property
     def tidb_connection_string(self) -> str:
         """Construct TiDB connection string for SQLAlchemy"""
@@ -49,9 +45,7 @@ class Settings(BaseSettings):
     debug: bool = True
     
     # Session Configuration
-    session_ttl_hours: int = int(os.getenv("SESSION_TTL_HOURS", "24"))
     max_session_messages: int = int(os.getenv("MAX_SESSION_MESSAGES", "20"))
-    session_cleanup_interval_hours: int = int(os.getenv("SESSION_CLEANUP_INTERVAL_HOURS", "6"))
     
 
 settings = Settings()

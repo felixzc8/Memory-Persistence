@@ -94,12 +94,12 @@ async def continue_chat_session(user_id: str, session_id: str, request: ChatRequ
 
 # Session Management Endpoints
 @router.get("/{user_id}/sessions", response_model=SessionListResponse)
-async def get_user_sessions(user_id: str, active_only: bool = True):
+async def get_user_sessions(user_id: str):
     """
     Get list of user's sessions
     """
     try:
-        sessions = session_service.get_user_sessions(user_id, active_only)
+        sessions = session_service.get_user_sessions(user_id)
         return SessionListResponse(
             sessions=sessions,
             user_id=user_id,

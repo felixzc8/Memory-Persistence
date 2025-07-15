@@ -1,6 +1,6 @@
-from sqlalchemy import create_engine, Column, String, Text, DateTime, Boolean, Integer, JSON
+from sqlalchemy import create_engine, Column, String, Text, DateTime, JSON, Enum, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.sql import func
 from app.config import settings
 import logging
@@ -9,17 +9,30 @@ logger = logging.getLogger(__name__)
 
 Base = declarative_base()
 
-class SessionModel(Base):
-    __tablename__ = "sessions"
+class Conversation(Base):
+    __tablename__ = "conversations"
     
-    session_id = Column(String(36), primary_key=True)
+    id = Column(String(36), primary_key=True)
     user_id = Column(String(255), nullable=False, index=True)
-    title = Column(String(100), nullable=False)
-    messages = Column(JSON, nullable=False, default=list)
+    title = Column(String(255), nullable=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
-    last_activity = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
-    is_active = Column(Boolean, default=True, nullable=False)
-    message_count = Column(Integer, default=0, nullable=False)
+    last_updated = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+    
+    # Relationship to messages
+    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
+
+class Message(Base):
+    __tablename__ = "messages"
+    
+    id = Column(String(36), primary_key=True)
+    conversation_id = Column(String(36), ForeignKey("conversations.id"), nullable=False, index=True)
+    role = Column(Enum("user", "assistant", "system", name="message_role"), nullable=False)
+    content = Column(Text, nullable=False)
+    message_metadata = Column(JSON, nullable=True)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    
+    # Relationship to conversation
+    conversation = relationship("Conversation", back_populates="messages")
 
 # Database connection
 engine = create_engine(
