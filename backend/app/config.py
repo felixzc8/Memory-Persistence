@@ -6,6 +6,8 @@ from pydantic_settings import BaseSettings
 load_dotenv()
 
 class Settings(BaseSettings):
+    model_config = {"protected_namespaces": (), "env_file": ".env"}
+    
     # OpenAI Configuration
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     model_choice: str = os.getenv("MODEL_CHOICE", "gpt-4o-mini")
@@ -46,8 +48,11 @@ class Settings(BaseSettings):
     api_port: int = 8000
     debug: bool = True
     
-    class Config:
-        env_file = ".env"
+    # Session Configuration
+    session_ttl_hours: int = int(os.getenv("SESSION_TTL_HOURS", "24"))
+    max_session_messages: int = int(os.getenv("MAX_SESSION_MESSAGES", "20"))
+    session_cleanup_interval_hours: int = int(os.getenv("SESSION_CLEANUP_INTERVAL_HOURS", "6"))
+    
 
 settings = Settings()
 

@@ -14,7 +14,7 @@ deprecation==2.1.0
 distro==1.9.0
 dnspython==2.7.0
 email_validator==2.1.1
-fastapi==0.115.13
+fastapi==0.115.14
 flupy==1.2.2
 frozenlist==1.7.0
 grpcio==1.73.0
@@ -31,12 +31,17 @@ iniconfig==2.1.0
 jiter==0.10.0
 jsonpatch==1.33
 jsonpointer==3.0.0
-# LangChain dependencies removed - using native TiDB provider
+langchain==0.3.12
+langchain-community==0.3.27
+langchain-core==0.3.63
+langchain-openai==0.3.27
+langchain-text-splitters==0.3.8
+langsmith==0.2.11
 marshmallow==3.26.1
--e git+ssh://git@github.com/felixzc8/mem0.git@620083cfd7b0cb2ce4f3d4698d2e9db3295e1114#egg=mem0ai
+-e git+ssh://git@github.com/felixzc8/mem0.git@155ee650c78eb7181aa3f20e82948955eadc6cb4#egg=mem0ai
 multidict==6.5.0
 mypy_extensions==1.1.0
-# mysql-connector-python removed - using PyMySQL for TiDB connections
+mysql-connector-python==8.0.33
 numpy==1.26.4
 openai==1.88.0
 orjson==3.10.18

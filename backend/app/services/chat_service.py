@@ -2,6 +2,7 @@ from openai import OpenAI
 from typing import List, Dict, Tuple
 from app.config import settings
 from app.services.memory_service import memory_service
+from app.services.session_service import session_service
 from app.schemas.chat import ChatMessage, ChatResponse
 import logging
 from datetime import datetime
@@ -26,36 +27,49 @@ class ChatService:
         session_id: str = None
     ) -> ChatResponse:
         """
-        Process a chat message with memory context
+        Process a chat message with memory context and session history
         
         Args:
             message: User's message
             user_id: Unique identifier for the user
-            session_id: Optional session identifier
+            session_id: Optional session identifier for conversation context
             
         Returns:
             ChatResponse with assistant's response and metadata
         """
         try:
-            # Get relevant memories
+            # Create session if none provided
+            if not session_id:
+                # Auto-generate title from first message
+                title = session_service.generate_session_title(message)
+                session_response = session_service.create_session(user_id, title)
+                session_id = session_response.session_id
+                logger.info(f"Created new session {session_id} for user {user_id}")
+            
+            # Get session context (recent conversation history)
+            session_context = session_service.get_session_context(session_id, limit=15)
+            
+            # Get relevant long-term memories
             memories = memory_service.search_memories(
                 query=message, 
                 user_id=user_id, 
-                limit=settings.memory_search_limit
+                limit=5  # Reduced since we have session context
             )
             
-            # Format memory context
             memories_context = self._format_memory_context(memories)
             memories_used = [mem['memory'] for mem in memories]
             
             # Create system prompt with memory context
             system_prompt = self._create_system_prompt(memories_context)
             
-            # Prepare messages for OpenAI
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": message}
-            ]
+            # Prepare messages for OpenAI with session context
+            messages = [{"role": "system", "content": system_prompt}]
+            
+            # Add session context (conversation history)
+            messages.extend(session_context)
+            
+            # Add current user message
+            messages.append({"role": "user", "content": message})
             
             # Get response from OpenAI
             response = self.client.chat.completions.create(
@@ -67,7 +81,11 @@ class ChatService:
             
             assistant_response = response.choices[0].message.content
             
-            # Save conversation to memory
+            # Save both user message and assistant response to session
+            session_service.add_message_to_session(session_id, "user", message)
+            session_service.add_message_to_session(session_id, "assistant", assistant_response)
+            
+            # Save conversation to long-term memory (less frequently than before)
             conversation_messages = [
                 {"role": "user", "content": message},
                 {"role": "assistant", "content": assistant_response}
@@ -97,8 +115,12 @@ class ChatService:
     
     def _create_system_prompt(self, memories_context: str) -> str:
         """Create system prompt with memory context"""
-        return f"""You are a helpful and friendly assistant with persistent memory. 
-        
+        return f"""You are a helpful and friendly assistant with persistent memory and conversation history.
+
+You have access to both:
+1. Recent conversation history in this session
+2. Long-term memories from past conversations
+
 Answer the user's question based on the conversation context and their memories.
 Be conversational, helpful, and remember to use the provided memories when relevant.
 
@@ -106,8 +128,9 @@ Be conversational, helpful, and remember to use the provided memories when relev
 
 Guidelines:
 - Be natural and conversational
-- Use memories when they're relevant to the current conversation
-- If no memories are relevant, respond normally
+- Use the conversation history to maintain context within this session
+- Use long-term memories when they're relevant to the current conversation
+- If no memories are relevant, respond normally based on the conversation
 - Keep responses concise but informative
 - Maintain a friendly and helpful tone"""
 
