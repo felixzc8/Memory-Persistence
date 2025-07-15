@@ -6,7 +6,7 @@ pymysql==1.1.1
 
 openai==1.88.0
 
-mem0ai @ git+https://github.com/felixzc8/mem0.git@main#egg=mem0ai
+mem0ai @ git+https://github.com/felixzc8/mem0.git@feature/tidb#egg=mem0ai
 
 pydantic==2.11.7
 pydantic-settings==2.9.1
