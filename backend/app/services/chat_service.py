@@ -1,11 +1,12 @@
 from openai import OpenAI
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, AsyncGenerator
 from app.config import settings
 from app.services.memory_service import memory_service
 from app.services.session_service import session_service
 from app.schemas.chat import ChatMessage, ChatResponse
 import logging
 from datetime import datetime
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,108 @@ class ChatService:
             logger.error(f"Failed to initialize OpenAI client: {e}")
             raise
     
+    async def chat_with_memory_stream(
+        self, 
+        message: str, 
+        user_id: str,
+        session_id: str = None
+    ) -> AsyncGenerator[str, None]:
+        """
+        Process a chat message with memory context and session history (streaming version)
+        
+        Args:
+            message: User's message
+            user_id: Unique identifier for the user
+            session_id: Optional session identifier for conversation context
+            
+        Yields:
+            SSE-formatted strings with streaming response chunks
+        """
+        try:
+            # Create session if none provided
+            if not session_id:
+                # Auto-generate title from first message
+                title = session_service.generate_session_title(message)
+                session_response = session_service.create_session(user_id, title)
+                session_id = session_response.session_id
+                logger.info(f"Created new session {session_id} for user {user_id}")
+                
+                # Send session creation event
+                yield f"event: session_created\ndata: {json.dumps({'session_id': session_id, 'title': title})}\n\n"
+            
+            # Get session context (recent conversation history)
+            session_context = session_service.get_session_context(session_id, limit=15)
+            
+            # Get relevant long-term memories
+            memories = memory_service.search_memories(
+                query=message, 
+                user_id=user_id, 
+                limit=5
+            )
+            
+            memories_context = self._format_memory_context(memories)
+            memories_used = [mem['memory'] for mem in memories]
+            
+            # Send memories event
+            yield f"event: memories_loaded\ndata: {json.dumps({'count': len(memories_used)})}\n\n"
+            
+            # Create system prompt with memory context
+            system_prompt = self._create_system_prompt(memories_context)
+            
+            # Prepare messages for OpenAI with session context
+            messages = [{"role": "system", "content": system_prompt}]
+            
+            # Add session context (conversation history)
+            messages.extend(session_context)
+            
+            # Add current user message
+            messages.append({"role": "user", "content": message})
+            
+            # Save user message to session
+            session_service.add_message_to_session(session_id, "user", message)
+            
+            # Stream response from OpenAI
+            full_response = ""
+            
+            stream = self.client.chat.completions.create(
+                model=settings.model_choice,
+                messages=messages,
+                temperature=0.7,
+                max_tokens=1000,
+                stream=True
+            )
+            
+            for chunk in stream:
+                if chunk.choices[0].delta.content is not None:
+                    content = chunk.choices[0].delta.content
+                    full_response += content
+                    # Send content chunk
+                    yield f"event: content\ndata: {json.dumps({'content': content})}\n\n"
+            
+            # Save assistant response to session
+            session_service.add_message_to_session(session_id, "assistant", full_response)
+            
+            # Save conversation to long-term memory
+            conversation_messages = [
+                {"role": "user", "content": message},
+                {"role": "assistant", "content": full_response}
+            ]
+            
+            memory_service.add_memory(conversation_messages, user_id)
+            
+            # Send completion event with metadata
+            completion_data = {
+                'session_id': session_id,
+                'memories_used': memories_used,
+                'timestamp': datetime.utcnow().isoformat()
+            }
+            yield f"event: complete\ndata: {json.dumps(completion_data)}\n\n"
+            
+        except Exception as e:
+            logger.error(f"Error in chat_with_memory_stream for user {user_id}: {e}")
+            error_data = {'error': str(e)}
+            yield f"event: error\ndata: {json.dumps(error_data)}\n\n"
+
     async def chat_with_memory(
         self, 
         message: str, 

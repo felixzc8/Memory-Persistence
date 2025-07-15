@@ -5,6 +5,8 @@ function Chat({ username, userId, onSignout }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingMessage, setStreamingMessage] = useState('');
   const [sessions, setSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [showSessions, setShowSessions] = useState(false);
@@ -29,10 +31,10 @@ function Chat({ username, userId, onSignout }) {
   }, [messages]);
 
   useEffect(() => {
-    if (!isLoading && inputRef.current) {
+    if (!isLoading && !isStreaming && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [isLoading]);
+  }, [isLoading, isStreaming]);
 
   // Load user sessions on mount
   useEffect(() => {
@@ -174,45 +176,30 @@ function Chat({ username, userId, onSignout }) {
     }
   };
 
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading) return;
-
-    // Handle special commands
-    if (input.trim() === 'sessions') {
-      setShowSessions(!showSessions);
-      setInput('');
-      return;
-    }
-
-    if (input.trim() === 'new') {
-      createNewSession();
-      setInput('');
-      return;
-    }
-
+  const sendMessageStreaming = async (messageText) => {
     const userMessage = {
       type: 'user',
-      content: input,
+      content: messageText,
       timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
+    setIsStreaming(true);
+    setStreamingMessage('');
 
     try {
       const requestBody = {
-        message: input,
+        message: messageText,
         user_id: userId
       };
 
       let apiUrl;
       if (currentSessionId) {
         // Continue existing session
-        apiUrl = `/api/v1/chat/${userId}/${currentSessionId}`;
+        apiUrl = `/api/v1/chat/${userId}/${currentSessionId}/stream`;
       } else {
         // Create new session
-        apiUrl = `/api/v1/chat/${userId}/new`;
+        apiUrl = `/api/v1/chat/${userId}/new/stream`;
       }
 
       const response = await fetch(apiUrl, {
@@ -227,21 +214,85 @@ function Chat({ username, userId, onSignout }) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      
-      // Update current session ID if a new one was created
-      if (data.session_id && data.session_id !== currentSessionId) {
-        setCurrentSessionId(data.session_id);
-        loadUserSessions(); // Refresh sessions list
-      }
-      
-      const assistantMessage = {
-        type: 'assistant',
-        content: data.response || 'No response received',
-        timestamp: new Date()
-      };
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let fullResponse = '';
+      let newSessionId = null;
 
-      setMessages(prev => [...prev, assistantMessage]);
+      // Add streaming message placeholder
+      const streamingMessageIndex = messages.length + 1;
+      setMessages(prev => [...prev, {
+        type: 'assistant',
+        content: '',
+        timestamp: new Date(),
+        isStreaming: true
+      }]);
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Process complete SSE events
+        const events = buffer.split('\n\n');
+        buffer = events.pop() || ''; // Keep incomplete event in buffer
+
+        for (const event of events) {
+          if (!event.trim()) continue;
+          
+          const lines = event.split('\n');
+          let eventType = null;
+          let data = null;
+
+          for (const line of lines) {
+            if (line.startsWith('event: ')) {
+              eventType = line.substring(7);
+            } else if (line.startsWith('data: ')) {
+              data = line.substring(6);
+            }
+          }
+
+          if (eventType && data) {
+            try {
+              const parsedData = JSON.parse(data);
+              
+              switch (eventType) {
+                case 'session_created':
+                  newSessionId = parsedData.session_id;
+                  break;
+                case 'content':
+                  fullResponse += parsedData.content;
+                  setStreamingMessage(fullResponse);
+                  // Update the streaming message in real-time
+                  setMessages(prev => prev.map((msg, index) => 
+                    index === streamingMessageIndex ? 
+                      { ...msg, content: fullResponse } : msg
+                  ));
+                  break;
+                case 'complete':
+                  // Finalize the message
+                  setMessages(prev => prev.map((msg, index) => 
+                    index === streamingMessageIndex ? 
+                      { ...msg, isStreaming: false } : msg
+                  ));
+                  
+                  // Update session ID if new one was created
+                  if (parsedData.session_id && parsedData.session_id !== currentSessionId) {
+                    setCurrentSessionId(parsedData.session_id);
+                    loadUserSessions();
+                  }
+                  break;
+                case 'error':
+                  throw new Error(parsedData.error);
+              }
+            } catch (parseError) {
+              console.warn('Failed to parse SSE data:', parseError);
+            }
+          }
+        }
+      }
     } catch (error) {
       const errorMessage = {
         type: 'system',
@@ -250,7 +301,87 @@ function Chat({ username, userId, onSignout }) {
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
-      setIsLoading(false);
+      setIsStreaming(false);
+      setStreamingMessage('');
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!input.trim() || isLoading || isStreaming) return;
+
+    // Handle special commands
+    if (input.trim() === 'sessions') {
+      setShowSessions(!showSessions);
+      setInput('');
+      return;
+    }
+
+    if (input.trim() === 'new') {
+      createNewSession();
+      setInput('');
+      return;
+    }
+
+    const messageText = input;
+    setInput('');
+    
+    // Try streaming first, fallback to regular if it fails
+    try {
+      await sendMessageStreaming(messageText);
+    } catch (streamError) {
+      console.warn('Streaming failed, falling back to regular API:', streamError);
+      
+      // Fallback to regular API
+      setIsLoading(true);
+      try {
+        const requestBody = {
+          message: messageText,
+          user_id: userId
+        };
+
+        let apiUrl;
+        if (currentSessionId) {
+          apiUrl = `/api/v1/chat/${userId}/${currentSessionId}`;
+        } else {
+          apiUrl = `/api/v1/chat/${userId}/new`;
+        }
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.session_id && data.session_id !== currentSessionId) {
+          setCurrentSessionId(data.session_id);
+          loadUserSessions();
+        }
+        
+        const assistantMessage = {
+          type: 'assistant',
+          content: data.response || 'No response received',
+          timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, assistantMessage]);
+      } catch (error) {
+        const errorMessage = {
+          type: 'system',
+          content: `Error: ${error.message}`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -309,10 +440,10 @@ function Chat({ username, userId, onSignout }) {
               {message.type === 'system' && (
                 <span style={{ color: '#ffbd2e' }}> system: </span>
               )}
-              <span>{message.content}</span>
+              <span>{message.content}{message.isStreaming && <span className="cursor">|</span>}</span>
             </div>
           ))}
-          {isLoading && (
+          {isLoading && !isStreaming && (
             <div className="message loading">
               <span style={{ color: '#666', fontSize: '12px' }}>
                 [{formatTimestamp(new Date())}]
@@ -335,9 +466,9 @@ function Chat({ username, userId, onSignout }) {
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Type message, 'sessions', or 'new'..."
-            disabled={isLoading}
+            disabled={isLoading || isStreaming}
           />
-          {!isLoading && <span className="cursor">|</span>}
+          {!isLoading && !isStreaming && <span className="cursor">|</span>}
           <button 
             className="sessions-btn"
             onClick={() => setShowSessions(!showSessions)}

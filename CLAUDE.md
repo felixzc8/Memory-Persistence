@@ -128,11 +128,25 @@ This is a **full-stack application** with a FastAPI backend and React frontend f
 - Vector table name: `memory_vectors` (configurable)
 
 ### API Endpoints
-- `POST /api/v1/chat` - Main chat with memory (used by frontend)
-- `POST /api/v1/memories/search` - Search user memories  
-- `GET /api/v1/memories/summary/{user_id}` - Conversation summary
-- `DELETE /api/v1/memories/{user_id}` - Delete user memories
-- `GET /health` and `GET /api/v1/health` - Health checks
+**Chat Endpoints:**
+- `POST /api/v1/chat/{user_id}/new` - Create new session and send first message
+- `POST /api/v1/chat/{user_id}/{session_id}` - Continue conversation in existing session
+- `POST /api/v1/chat/{user_id}/new/stream` - Streaming version of new session endpoint (SSE)
+- `POST /api/v1/chat/{user_id}/{session_id}/stream` - Streaming version for existing sessions (SSE)
+
+**Session Management:**
+- `GET /api/v1/chat/{user_id}/sessions` - Get list of user's sessions
+- `GET /api/v1/chat/{user_id}/sessions/{session_id}` - Get specific session
+- `PUT /api/v1/chat/{user_id}/sessions/{session_id}` - Update session metadata
+- `DELETE /api/v1/chat/{user_id}/sessions/{session_id}` - Delete session
+
+**Memory Management:**
+- `POST /api/v1/chat/{user_id}/memories/search` - Search user memories  
+- `GET /api/v1/chat/{user_id}/memories/summary` - Conversation summary
+- `DELETE /api/v1/chat/{user_id}/memories` - Delete user memories
+
+**Health Checks:**
+- `GET /health` and `GET /api/v1/chat/health` - Health checks
 
 ### Environment Variables Required
 ```env
@@ -164,9 +178,25 @@ TIDB_DB_NAME=           # TiDB database name
 - Users can type continuously without clicking back into input
 - useEffect-based approach for clean focus management
 
+### Streaming Implementation
+**Server-Sent Events (SSE):**
+- Real-time streaming responses using FastAPI StreamingResponse
+- EventSource API integration on frontend for SSE consumption
+- Graceful fallback to regular API calls if streaming fails
+- Character-by-character response rendering with typing indicators
+
+**SSE Event Types:**
+- `session_created` - New session information
+- `memories_loaded` - Memory context loaded
+- `content` - Streaming response chunks
+- `complete` - Response finished with metadata
+- `error` - Error information
+
 ## Current Status
 - Full-stack application with React frontend and FastAPI backend
 - Terminal-style UI with MacOS aesthetic
 - Username-based authentication with localStorage persistence
 - Real-time chat with persistent memory via TiDB Vector
+- **NEW**: Streaming chat responses with Server-Sent Events (SSE)
+- **NEW**: Real-time character-by-character response rendering
 - No test suite or CI/CD pipeline currently implemented

@@ -254,24 +254,42 @@ async def health_check():
         logger.error(f"Health check failed: {e}")
         raise HTTPException(status_code=503, detail="Service unhealthy")
 
-# Streaming chat endpoints (placeholder for future implementation)
+# Streaming chat endpoints
 @router.post("/{user_id}/new/stream")
 async def new_chat_session_stream(user_id: str, request: ChatRequest):
     """
-    Streaming chat endpoint for new sessions (placeholder)
+    Streaming chat endpoint for new sessions using Server-Sent Events
     """
     try:
-        # For now, just return a regular response via streaming
-        response = await chat_service.chat_with_memory(
+        # Validate user_id matches request
+        if request.user_id != user_id:
+            raise HTTPException(status_code=400, detail="User ID mismatch")
+        
+        # Check/create user in database
+        user = user_service.get_or_create_user(user_id)
+        if not user:
+            logger.warning(f"Failed to get or create user: {user_id}")
+        else:
+            user_service.update_user_activity(user_id)
+            logger.info(f"User {user_id} authenticated/created successfully")
+        
+        # Use streaming chat service
+        stream_generator = chat_service.chat_with_memory_stream(
             message=request.message,
             user_id=user_id,
-            session_id=None
+            session_id=None  # Force new session creation
         )
         
-        def generate():
-            yield f"data: {response.response}\n\n"
-        
-        return StreamingResponse(generate(), media_type="text/plain")
+        return StreamingResponse(
+            stream_generator, 
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Cache-Control"
+            }
+        )
     except Exception as e:
         logger.error(f"Error in streaming new chat for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Streaming chat failed: {str(e)}")
@@ -279,9 +297,13 @@ async def new_chat_session_stream(user_id: str, request: ChatRequest):
 @router.post("/{user_id}/{session_id}/stream")
 async def continue_chat_session_stream(user_id: str, session_id: str, request: ChatRequest):
     """
-    Streaming chat endpoint for existing sessions (placeholder)
+    Streaming chat endpoint for existing sessions using Server-Sent Events
     """
     try:
+        # Validate user_id matches request
+        if request.user_id != user_id:
+            raise HTTPException(status_code=400, detail="User ID mismatch")
+        
         # Validate session exists and belongs to user
         session = session_service.get_session(session_id)
         if not session:
@@ -289,16 +311,31 @@ async def continue_chat_session_stream(user_id: str, session_id: str, request: C
         if session.user_id != user_id:
             raise HTTPException(status_code=403, detail="Session does not belong to user")
         
-        response = await chat_service.chat_with_memory(
+        # Check/create user in database
+        user = user_service.get_or_create_user(user_id)
+        if not user:
+            logger.warning(f"Failed to get or create user: {user_id}")
+        else:
+            user_service.update_user_activity(user_id)
+            logger.info(f"User {user_id} authenticated/created successfully")
+        
+        # Use streaming chat service
+        stream_generator = chat_service.chat_with_memory_stream(
             message=request.message,
             user_id=user_id,
             session_id=session_id
         )
         
-        def generate():
-            yield f"data: {response.response}\n\n"
-        
-        return StreamingResponse(generate(), media_type="text/plain")
+        return StreamingResponse(
+            stream_generator, 
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Cache-Control"
+            }
+        )
     except HTTPException:
         raise
     except Exception as e:
