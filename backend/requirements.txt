@@ -1,26 +1,16 @@
-# Core web framework
 fastapi==0.115.13
 uvicorn==0.34.3
 
-# Database
 sqlalchemy==2.0.41
 pymysql==1.1.1
 
-# OpenAI integration
 openai==1.88.0
 
-# Memory management
 git+https://github.com/felixzc8/mem0.git
 
-# Pydantic for data validation
 pydantic==2.11.7
 pydantic-settings==2.9.1
 
-# Environment variables
 python-dotenv==1.1.0
 
-# Cross-origin requests
-# (FastAPI includes CORS middleware)
-
-# Standard library extensions
 typing-extensions==4.14.0
