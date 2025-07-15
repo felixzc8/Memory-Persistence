@@ -2,6 +2,7 @@ from mem0 import Memory
 from typing import List, Dict, Any
 from app.config import settings
 import logging
+import ssl
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,8 @@ class MemoryService:
                 logger.info("Memory service initialized successfully with native TiDB Vector")
             except Exception as e:
                 logger.error(f"Failed to initialize memory service with native TiDB Vector: {e}")
+                import traceback
+                logger.error(f"Full traceback: {traceback.format_exc()}")
                 self.memory = None
         else:
             logger.warning("Memory service not initialized - missing OpenAI API key or TiDB configuration")

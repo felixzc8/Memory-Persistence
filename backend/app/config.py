@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 import os
+import ssl
 from typing import Optional
 from pydantic_settings import BaseSettings
 
@@ -19,7 +20,7 @@ class Settings(BaseSettings):
     
     tidb_use_ssl: bool = True
     tidb_verify_cert: bool = True
-    tidb_ssl_ca: Optional[str] = "/etc/ssl/cert.pem"
+    tidb_ssl_ca: Optional[str] = ssl.get_default_verify_paths().cafile
     embedding_model_dims: int = 1536
     mem0_collection_name: str = "mem0"
     memory_search_limit: int = 50
@@ -27,12 +28,12 @@ class Settings(BaseSettings):
     @property
     def tidb_connection_string(self) -> str:
         """Construct TiDB connection string for SQLAlchemy"""
-        return f"mysql+pymysql://{self.tidb_user}:{self.tidb_password}@{self.tidb_host}:{self.tidb_port}/{self.tidb_db_name}?ssl_ca=/etc/ssl/cert.pem&ssl_verify_cert=true&ssl_verify_identity=true"
+        return f"mysql+pymysql://{self.tidb_user}:{self.tidb_password}@{self.tidb_host}:{self.tidb_port}/{self.tidb_db_name}?ssl_ca={self.tidb_ssl_ca}&ssl_verify_cert=true&ssl_verify_identity=true"
     
     @property
     def tidb_vector_connection_string(self) -> str:
         """Construct TiDB connection string for TiDB Vector Store"""
-        return f"mysql+pymysql://{self.tidb_user}:{self.tidb_password}@{self.tidb_host}:{self.tidb_port}/{self.tidb_db_name}?ssl_ca=/etc/ssl/cert.pem&ssl_verify_cert=true&ssl_verify_identity=true"
+        return f"mysql+pymysql://{self.tidb_user}:{self.tidb_password}@{self.tidb_host}:{self.tidb_port}/{self.tidb_db_name}?ssl_ca={self.tidb_ssl_ca}&ssl_verify_cert=true&ssl_verify_identity=true"
     
     api_host: str = "0.0.0.0"
     api_port: int = 8000
