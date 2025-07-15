@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime, timezone
-import uuid
 
 class SessionMessage(BaseModel):
     role: str = Field(..., description="The role of the message sender (user, assistant, system)")
