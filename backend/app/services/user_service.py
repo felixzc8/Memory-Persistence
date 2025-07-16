@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
-from app.models.user import User, Base
+from app.models import User, Base
 from app.schemas.user import UserCreate, UserResponse
 from app.config import settings
 import logging
@@ -17,30 +17,27 @@ class UserService:
         self.engine = None
         self.SessionLocal = None
         
-        if settings.tidb_host:
-            try:
-                self.engine = create_engine(
-                    settings.tidb_connection_string,
-                    pool_pre_ping=True,
-                    pool_recycle=3600,
-                    echo=settings.debug
-                )
-                
-                self.SessionLocal = sessionmaker(
-                    autocommit=False,
-                    autoflush=False,
-                    bind=self.engine
-                )
-                
-                self._create_tables()
-                
-                logger.info("User service initialized successfully")
-            except Exception as e:
-                logger.error(f"Failed to initialize user service: {e}")
-                self.engine = None
-                self.SessionLocal = None
-        else:
-            logger.warning("User service not initialized - missing TiDB configuration")
+        try:
+            self.engine = create_engine(
+                settings.tidb_connection_string,
+                pool_pre_ping=True,
+                pool_recycle=3600,
+                echo=settings.debug
+            )
+            
+            self.SessionLocal = sessionmaker(
+                autocommit=False,
+                autoflush=False,
+                bind=self.engine
+            )
+            
+            self._create_tables()
+            
+            logger.info("User service initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize user service: {e}")
+            self.engine = None
+            self.SessionLocal = None
     
     def _create_tables(self):
         """Create database tables if they don't exist"""

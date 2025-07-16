@@ -1,36 +1,10 @@
-from sqlalchemy import create_engine, Column, String, Text, DateTime, JSON, Enum, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
-from sqlalchemy.sql import func
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from app.config import settings
+from app.models import Base
 import logging
 
 logger = logging.getLogger(__name__)
-
-Base = declarative_base()
-
-class Conversation(Base):
-    __tablename__ = "conversations"
-    
-    id = Column(String(36), primary_key=True)
-    user_id = Column(String(255), nullable=False, index=True)
-    title = Column(String(255), nullable=True)
-    created_at = Column(DateTime, server_default=func.now(), nullable=False)
-    last_updated = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
-    
-    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
-
-class Message(Base):
-    __tablename__ = "messages"
-    
-    id = Column(String(36), primary_key=True)
-    conversation_id = Column(String(36), ForeignKey("conversations.id"), nullable=False, index=True)
-    role = Column(Enum("user", "assistant", "system", name="message_role"), nullable=False)
-    content = Column(Text, nullable=False)
-    message_metadata = Column(JSON, nullable=True)
-    created_at = Column(DateTime, server_default=func.now(), nullable=False)
-    
-    conversation = relationship("Conversation", back_populates="messages")
 try:
     logger.info(f"Connecting to database: {settings.tidb_host}:{settings.tidb_port}")
     engine = create_engine(

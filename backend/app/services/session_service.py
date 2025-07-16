@@ -1,7 +1,8 @@
 from typing import List, Optional, Dict, Any
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session as DBSession
 from sqlalchemy import and_, desc
-from app.database import Conversation, Message, get_db
+from app.database import get_db
+from app.models import Session, Message
 from app.schemas.session import (
     Session as SessionSchema, 
     SessionMessage, 
@@ -18,58 +19,58 @@ import logging
 logger = logging.getLogger(__name__)
 
 class SessionService:
-    """Service for managing user sessions and conversation history"""
+    """Service for managing user sessions and message history"""
     
     def __init__(self):
         self.max_messages = settings.max_session_messages
     
     def create_session(self, user_id: str, title: Optional[str] = None) -> CreateSessionResponse:
-        """Create a new conversation for the user"""
+        """Create a new session for the user"""
         db = next(get_db())
         try:
-            conversation_id = str(uuid.uuid4())
+            session_id = str(uuid.uuid4())
             
             if not title:
-                title = f"Conversation {datetime.now(timezone.utc).strftime('%b %d, %Y')}"
+                title = f"Session {datetime.now(timezone.utc).strftime('%b %d, %Y')}"
             
-            conversation = Conversation(
-                id=conversation_id,
+            session = Session(
+                id=session_id,
                 user_id=user_id,
                 title=title
             )
             
-            db.add(conversation)
+            db.add(session)
             db.commit()
-            db.refresh(conversation)
+            db.refresh(session)
             
-            logger.info(f"Created conversation {conversation_id} for user {user_id}")
+            logger.info(f"Created session {session_id} for user {user_id}")
             
             return CreateSessionResponse(
-                session_id=conversation_id,
+                session_id=session_id,
                 user_id=user_id,
                 title=title,
-                created_at=conversation.created_at
+                created_at=session.created_at
             )
         except Exception as e:
             db.rollback()
-            logger.error(f"Error creating conversation for user {user_id}: {e}")
+            logger.error(f"Error creating session for user {user_id}: {e}")
             raise
         finally:
             db.close()
     
     def get_session(self, session_id: str) -> Optional[SessionSchema]:
-        """Get conversation with all messages"""
+        """Get session with all messages"""
         db = next(get_db())
         try:
-            conversation = db.query(Conversation).filter(
-                Conversation.id == session_id
+            session = db.query(Session).filter(
+                Session.id == session_id
             ).first()
             
-            if not conversation:
+            if not session:
                 return None
             
             messages_query = db.query(Message).filter(
-                Message.conversation_id == session_id
+                Message.session_id == session_id
             ).order_by(Message.created_at).all()
             
             messages = [
@@ -81,151 +82,151 @@ class SessionService:
             ]
             
             return SessionSchema(
-                session_id=conversation.id,
-                user_id=conversation.user_id,
-                title=conversation.title,
+                session_id=session.id,
+                user_id=session.user_id,
+                title=session.title,
                 messages=messages,
-                created_at=conversation.created_at,
-                last_activity=conversation.last_updated,
+                created_at=session.created_at,
+                last_activity=session.last_updated,
                 is_active=True,
                 message_count=len(messages)
             )
         except Exception as e:
-            logger.error(f"Error getting conversation {session_id}: {e}")
+            logger.error(f"Error getting session {session_id}: {e}")
             return None
         finally:
             db.close()
     
     def get_user_sessions(self, user_id: str) -> List[SessionSummary]:
-        """Get list of user's conversations (summaries only)"""
+        """Get list of user's sessions (summaries only)"""
         db = next(get_db())
         try:
-            conversations = db.query(
-                Conversation.id,
-                Conversation.user_id,
-                Conversation.title,
-                Conversation.created_at,
-                Conversation.last_updated
-            ).filter(Conversation.user_id == user_id).order_by(desc(Conversation.last_updated)).all()
+            sessions = db.query(
+                Session.id,
+                Session.user_id,
+                Session.title,
+                Session.created_at,
+                Session.last_updated
+            ).filter(Session.user_id == user_id).order_by(desc(Session.last_updated)).all()
             
             summaries = []
-            for conv in conversations:
+            for sess in sessions:
                 message_count = db.query(Message).filter(
-                    Message.conversation_id == conv.id
+                    Message.session_id == sess.id
                 ).count()
                 
                 summaries.append(SessionSummary(
-                    session_id=conv.id,
-                    user_id=conv.user_id,
-                    title=conv.title,
-                    created_at=conv.created_at,
-                    last_activity=conv.last_updated,
+                    session_id=sess.id,
+                    user_id=sess.user_id,
+                    title=sess.title,
+                    created_at=sess.created_at,
+                    last_activity=sess.last_updated,
                     message_count=message_count,
                     is_active=True
                 ))
             
             return summaries
         except Exception as e:
-            logger.error(f"Error getting conversations for user {user_id}: {e}")
+            logger.error(f"Error getting sessions for user {user_id}: {e}")
             return []
         finally:
             db.close()
     
     def add_message_to_session(self, session_id: str, role: str, content: str) -> bool:
-        """Add message to conversation"""
+        """Add message to session"""
         db = next(get_db())
         try:
-            conversation = db.query(Conversation).filter(
-                Conversation.id == session_id
+            session = db.query(Session).filter(
+                Session.id == session_id
             ).first()
             
-            if not conversation:
-                logger.warning(f"Conversation {session_id} not found")
+            if not session:
+                logger.warning(f"Session {session_id} not found")
                 return False
             
             current_count = db.query(Message).filter(
-                Message.conversation_id == session_id
+                Message.session_id == session_id
             ).count()
             
             if current_count >= self.max_messages:
                 oldest_messages = db.query(Message).filter(
-                    Message.conversation_id == session_id
+                    Message.session_id == session_id
                 ).order_by(Message.created_at).limit(current_count - self.max_messages + 1).all()
                 
                 for msg in oldest_messages:
                     db.delete(msg)
-                logger.info(f"Rotated messages for conversation {session_id}")
+                logger.info(f"Rotated messages for session {session_id}")
             
             message = Message(
                 id=str(uuid.uuid4()),
-                conversation_id=session_id,
+                session_id=session_id,
                 role=role,
                 content=content
             )
             
             db.add(message)
             
-            conversation.last_updated = datetime.now(timezone.utc)
+            session.last_updated = datetime.now(timezone.utc)
             
             db.commit()
             
-            logger.info(f"Added {role} message to conversation {session_id}")
+            logger.info(f"Added {role} message to session {session_id}")
             return True
             
         except Exception as e:
             db.rollback()
-            logger.error(f"Error adding message to conversation {session_id}: {e}")
+            logger.error(f"Error adding message to session {session_id}: {e}")
             return False
         finally:
             db.close()
     
     def update_session(self, session_id: str, update_data: UpdateSessionRequest) -> bool:
-        """Update conversation metadata"""
+        """Update session metadata"""
         db = next(get_db())
         try:
-            conversation = db.query(Conversation).filter(
-                Conversation.id == session_id
+            session = db.query(Session).filter(
+                Session.id == session_id
             ).first()
             
-            if not conversation:
+            if not session:
                 return False
             
             if update_data.title is not None:
-                conversation.title = update_data.title
+                session.title = update_data.title
             
-            conversation.last_updated = datetime.now(timezone.utc)
+            session.last_updated = datetime.now(timezone.utc)
             db.commit()
             
-            logger.info(f"Updated conversation {session_id}")
+            logger.info(f"Updated session {session_id}")
             return True
             
         except Exception as e:
             db.rollback()
-            logger.error(f"Error updating conversation {session_id}: {e}")
+            logger.error(f"Error updating session {session_id}: {e}")
             return False
         finally:
             db.close()
     
     def delete_session(self, session_id: str) -> bool:
-        """Delete a conversation and all its messages"""
+        """Delete a session and all its messages"""
         db = next(get_db())
         try:
-            conversation = db.query(Conversation).filter(
-                Conversation.id == session_id
+            session = db.query(Session).filter(
+                Session.id == session_id
             ).first()
             
-            if not conversation:
+            if not session:
                 return False
             
-            db.delete(conversation)
+            db.delete(session)
             db.commit()
             
-            logger.info(f"Deleted conversation {session_id}")
+            logger.info(f"Deleted session {session_id}")
             return True
             
         except Exception as e:
             db.rollback()
-            logger.error(f"Error deleting conversation {session_id}: {e}")
+            logger.error(f"Error deleting session {session_id}: {e}")
             return False
         finally:
             db.close()
@@ -255,7 +256,7 @@ class SessionService:
         
         title = " ".join(title.split())
         
-        return title if title else f"Conversation {datetime.now(timezone.utc).strftime('%b %d')}"
+        return title if title else f"Session {datetime.now(timezone.utc).strftime('%b %d')}"
     
 
 session_service = SessionService()
