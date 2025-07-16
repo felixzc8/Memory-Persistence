@@ -12,6 +12,7 @@ from app.schemas.session import (
     UpdateSessionRequest
 )
 from app.config import settings
+from app.exceptions import DatabaseException
 from datetime import datetime, timezone
 import uuid
 import logging
@@ -54,7 +55,11 @@ class SessionService:
         except Exception as e:
             db.rollback()
             logger.error(f"Error creating session for user {user_id}: {e}")
-            raise
+            raise DatabaseException(
+                f"Failed to create session for user {user_id}",
+                error_code="SESSION_CREATE_FAILED",
+                details={"user_id": user_id, "error": str(e)}
+            )
         finally:
             db.close()
     
@@ -93,7 +98,11 @@ class SessionService:
             )
         except Exception as e:
             logger.error(f"Error getting session {session_id}: {e}")
-            return None
+            raise DatabaseException(
+                f"Failed to retrieve session {session_id}",
+                error_code="SESSION_RETRIEVAL_FAILED",
+                details={"session_id": session_id, "error": str(e)}
+            )
         finally:
             db.close()
     

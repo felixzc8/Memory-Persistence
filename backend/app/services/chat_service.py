@@ -214,7 +214,6 @@ Guidelines:
             if not memories:
                 return "No conversation history found."
             
-            # Create a summary prompt
             memories_text = "\n".join([mem['memory'] for mem in memories])
             
             messages = [

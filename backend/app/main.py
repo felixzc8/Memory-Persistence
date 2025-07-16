@@ -1,9 +1,18 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.chat import router as chat_router
 from app.api.admin import router as admin_router
 from app.config import settings
 from app.database import create_tables
+from app.middleware.request_id import RequestIDMiddleware
+from app.middleware.exception_handler import (
+    database_exception_handler,
+    validation_exception_handler,
+    chat_exception_handler,
+    http_exception_handler,
+    general_exception_handler
+)
+from app.exceptions import DatabaseException, ValidationException, ChatException
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
@@ -19,6 +28,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+app.add_middleware(RequestIDMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,6 +36,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_exception_handler(DatabaseException, database_exception_handler)
+app.add_exception_handler(ValidationException, validation_exception_handler)
+app.add_exception_handler(ChatException, chat_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(Exception, general_exception_handler)
+
 app.include_router(chat_router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
 

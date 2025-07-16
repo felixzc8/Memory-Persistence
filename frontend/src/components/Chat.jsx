@@ -118,14 +118,12 @@ function Chat({ username, userId, onSignout }) {
       if (response.ok) {
         const session = await response.json();
         
-        // Convert session messages to chat format
         const sessionMessages = session.messages.map(msg => ({
           type: msg.role,
           content: msg.content,
           timestamp: new Date(msg.timestamp)
         }));
         
-        // Add system messages and session messages
         setMessages([
           {
             type: 'system',
@@ -185,10 +183,8 @@ function Chat({ username, userId, onSignout }) {
 
       let apiUrl;
       if (currentSessionId) {
-        // Continue existing session
         apiUrl = `/api/v1/chat/${userId}/${currentSessionId}/stream`;
       } else {
-        // Create new session
         apiUrl = `/api/v1/chat/${userId}/new/stream`;
       }
 
@@ -210,7 +206,6 @@ function Chat({ username, userId, onSignout }) {
       let fullResponse = '';
       let newSessionId = null;
 
-      // Add streaming message placeholder
       const streamingMessageIndex = messages.length + 1;
       setMessages(prev => [...prev, {
         type: 'assistant',
@@ -225,9 +220,8 @@ function Chat({ username, userId, onSignout }) {
 
         buffer += decoder.decode(value, { stream: true });
         
-        // Process complete SSE events
         const events = buffer.split('\n\n');
-        buffer = events.pop() || ''; // Keep incomplete event in buffer
+        buffer = events.pop() || '';
 
         for (const event of events) {
           if (!event.trim()) continue;
@@ -255,20 +249,17 @@ function Chat({ username, userId, onSignout }) {
                 case 'content':
                   fullResponse += parsedData.content;
                   setStreamingMessage(fullResponse);
-                  // Update the streaming message in real-time
                   setMessages(prev => prev.map((msg, index) => 
                     index === streamingMessageIndex ? 
                       { ...msg, content: fullResponse } : msg
                   ));
                   break;
                 case 'complete':
-                  // Finalize the message
                   setMessages(prev => prev.map((msg, index) => 
                     index === streamingMessageIndex ? 
                       { ...msg, isStreaming: false } : msg
                   ));
                   
-                  // Update session ID if new one was created
                   if (parsedData.session_id && parsedData.session_id !== currentSessionId) {
                     setCurrentSessionId(parsedData.session_id);
                     loadUserSessions();
@@ -299,7 +290,6 @@ function Chat({ username, userId, onSignout }) {
   const sendMessage = async () => {
     if (!input.trim() || isLoading || isStreaming) return;
 
-    // Handle special commands
     if (input.trim() === 'sessions') {
       setShowSessions(!showSessions);
       setInput('');
@@ -315,13 +305,11 @@ function Chat({ username, userId, onSignout }) {
     const messageText = input;
     setInput('');
     
-    // Try streaming first, fallback to regular if it fails
     try {
       await sendMessageStreaming(messageText);
     } catch (streamError) {
       console.warn('Streaming failed, falling back to regular API:', streamError);
       
-      // Fallback to regular API
       setIsLoading(true);
       try {
         const requestBody = {

@@ -4,6 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.models import User, Base
 from app.schemas.user import UserCreate, UserResponse
 from app.config import settings
+from app.exceptions import DatabaseException
 import logging
 from typing import Optional
 from datetime import datetime, timezone
@@ -51,14 +52,19 @@ class UserService:
     def get_db_session(self) -> Session:
         """Get database session"""
         if not self.SessionLocal:
-            raise RuntimeError("Database not initialized")
+            raise DatabaseException(
+                "Database not initialized",
+                error_code="DATABASE_NOT_INITIALIZED"
+            )
         return self.SessionLocal()
     
     def get_user_by_id(self, user_id: str) -> Optional[User]:
         """Get user by user_id"""
         if not self.SessionLocal:
-            logger.warning("Database not initialized")
-            return None
+            raise DatabaseException(
+                "Database not initialized",
+                error_code="DATABASE_NOT_INITIALIZED"
+            )
         
         try:
             with self.get_db_session() as db:
@@ -66,7 +72,11 @@ class UserService:
                 return user
         except SQLAlchemyError as e:
             logger.error(f"Error getting user {user_id}: {e}")
-            return None
+            raise DatabaseException(
+                f"Failed to retrieve user {user_id}",
+                error_code="USER_RETRIEVAL_FAILED",
+                details={"user_id": user_id, "error": str(e)}
+            )
     
     def create_user(self, user_data: UserCreate) -> Optional[User]:
         """Create a new user"""
