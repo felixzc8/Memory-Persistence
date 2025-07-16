@@ -1,7 +1,7 @@
 from mem0 import Memory
 from typing import List, Dict, Any
-from app.config import settings
-from app.exceptions import DatabaseException, ChatException
+from app.core.config import settings
+from app.core.exceptions import DatabaseException, ChatException
 import logging
 import ssl
 

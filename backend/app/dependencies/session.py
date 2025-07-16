@@ -1,9 +1,9 @@
 """
-Session dependencies for FastAPI endpoints.
+Session guards for FastAPI endpoints.
 """
 
 from app.services.session_service import session_service
-from app.exceptions import DatabaseException, ValidationException
+from app.core.exceptions import DatabaseException, ValidationException
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 async def get_user_session(session_id: str, user_id: str):
     """
-    Dependency for session validation with user ownership.
+    Guard for session validation with user ownership.
     
     Args:
         session_id: The session ID to validate

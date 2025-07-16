@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.config import settings
-from app.models import Base
+from app.core.config import settings
+from app.db.models import Base
 import logging
 
 logger = logging.getLogger(__name__)

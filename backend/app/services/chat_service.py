@@ -1,6 +1,6 @@
 from openai import OpenAI
 from typing import List, Dict, Tuple, AsyncGenerator
-from app.config import settings
+from app.core.config import settings
 from app.services.memory_service import memory_service
 from app.services.session_service import session_service
 from app.schemas.chat import ChatMessage, ChatResponse

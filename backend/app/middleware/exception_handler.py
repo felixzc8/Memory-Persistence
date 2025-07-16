@@ -4,7 +4,7 @@ Global exception handler middleware for standardized error responses.
 
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
-from app.exceptions import DatabaseException, ValidationException, ChatException
+from app.core.exceptions import DatabaseException, ValidationException, ChatException
 from app.schemas.error import ErrorResponse, ValidationErrorResponse, DatabaseErrorResponse, ChatErrorResponse
 import logging
 import uuid

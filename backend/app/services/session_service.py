@@ -1,8 +1,8 @@
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session as DBSession
 from sqlalchemy import and_, desc
-from app.database import get_db
-from app.models import Session, Message
+from app.db.database import get_db
+from app.db.models import Session, Message
 from app.schemas.session import (
     Session as SessionSchema, 
     SessionMessage, 
@@ -11,8 +11,8 @@ from app.schemas.session import (
     CreateSessionResponse,
     UpdateSessionRequest
 )
-from app.config import settings
-from app.exceptions import DatabaseException
+from app.core.config import settings
+from app.core.exceptions import DatabaseException
 from datetime import datetime, timezone
 import uuid
 import logging

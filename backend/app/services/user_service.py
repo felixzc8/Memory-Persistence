@@ -1,10 +1,10 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
-from app.models import User, Base
+from app.db.models import User, Base
 from app.schemas.user import UserCreate, UserResponse
-from app.config import settings
-from app.exceptions import DatabaseException
+from app.core.config import settings
+from app.core.exceptions import DatabaseException
 import logging
 from typing import Optional
 from datetime import datetime, timezone
