@@ -30,7 +30,7 @@ async def database_exception_handler(request: Request, exc: DatabaseException) -
         timestamp=datetime.now(),
         request_id=request_id
     )
-    return JSONResponse(status_code=500, content=response.model_dump())
+    return JSONResponse(status_code=500, content=response.model_dump(mode='json'))
 
 
 async def validation_exception_handler(request: Request, exc: ValidationException) -> JSONResponse:
@@ -56,7 +56,7 @@ async def validation_exception_handler(request: Request, exc: ValidationExceptio
         timestamp=datetime.now(),
         request_id=request_id
     )
-    return JSONResponse(status_code=status_code, content=response.model_dump())
+    return JSONResponse(status_code=status_code, content=response.model_dump(mode='json'))
 
 
 async def chat_exception_handler(request: Request, exc: ChatException) -> JSONResponse:
@@ -76,7 +76,7 @@ async def chat_exception_handler(request: Request, exc: ChatException) -> JSONRe
         timestamp=datetime.now(),
         request_id=request_id
     )
-    return JSONResponse(status_code=500, content=response.model_dump())
+    return JSONResponse(status_code=500, content=response.model_dump(mode='json'))
 
 
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
@@ -91,7 +91,7 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
         timestamp=datetime.now(),
         request_id=request_id
     )
-    return JSONResponse(status_code=exc.status_code, content=response.model_dump())
+    return JSONResponse(status_code=exc.status_code, content=response.model_dump(mode='json'))
 
 
 async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
@@ -106,4 +106,4 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
         timestamp=datetime.now(),
         request_id=request_id
     )
-    return JSONResponse(status_code=500, content=response.model_dump())
+    return JSONResponse(status_code=500, content=response.model_dump(mode='json'))

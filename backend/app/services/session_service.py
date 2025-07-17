@@ -11,7 +11,6 @@ from app.schemas.session import (
     CreateSessionResponse,
     UpdateSessionRequest
 )
-from app.core.config import settings
 from app.core.exceptions import DatabaseException
 from datetime import datetime, timezone
 import uuid
@@ -23,7 +22,7 @@ class SessionService:
     """Service for managing user sessions and message history"""
     
     def __init__(self):
-        self.max_messages = settings.max_session_messages
+        pass
     
     def create_session(self, user_id: str, title: Optional[str] = None) -> CreateSessionResponse:
         """Create a new session for the user"""
@@ -35,7 +34,7 @@ class SessionService:
                 title = f"Session {datetime.now(timezone.utc).strftime('%b %d, %Y')}"
             
             session = Session(
-                id=session_id,
+                session_id=session_id,
                 user_id=user_id,
                 title=title
             )
@@ -68,7 +67,7 @@ class SessionService:
         db = next(get_db())
         try:
             session = db.query(Session).filter(
-                Session.id == session_id
+                Session.session_id == session_id
             ).first()
             
             if not session:
@@ -87,12 +86,12 @@ class SessionService:
             ]
             
             return SessionSchema(
-                session_id=session.id,
+                session_id=session.session_id,
                 user_id=session.user_id,
                 title=session.title,
                 messages=messages,
                 created_at=session.created_at,
-                last_activity=session.last_updated,
+                last_activity=session.last_activity,
                 is_active=True,
                 message_count=len(messages)
             )
@@ -111,25 +110,25 @@ class SessionService:
         db = next(get_db())
         try:
             sessions = db.query(
-                Session.id,
+                Session.session_id,
                 Session.user_id,
                 Session.title,
                 Session.created_at,
-                Session.last_updated
-            ).filter(Session.user_id == user_id).order_by(desc(Session.last_updated)).all()
+                Session.last_activity
+            ).filter(Session.user_id == user_id).order_by(desc(Session.last_activity)).all()
             
             summaries = []
             for sess in sessions:
                 message_count = db.query(Message).filter(
-                    Message.session_id == sess.id
+                    Message.session_id == sess.session_id
                 ).count()
                 
                 summaries.append(SessionSummary(
-                    session_id=sess.id,
+                    session_id=sess.session_id,
                     user_id=sess.user_id,
                     title=sess.title,
                     created_at=sess.created_at,
-                    last_activity=sess.last_updated,
+                    last_activity=sess.last_activity,
                     message_count=message_count,
                     is_active=True
                 ))
@@ -146,25 +145,12 @@ class SessionService:
         db = next(get_db())
         try:
             session = db.query(Session).filter(
-                Session.id == session_id
+                Session.session_id == session_id
             ).first()
             
             if not session:
                 logger.warning(f"Session {session_id} not found")
                 return False
-            
-            current_count = db.query(Message).filter(
-                Message.session_id == session_id
-            ).count()
-            
-            if current_count >= self.max_messages:
-                oldest_messages = db.query(Message).filter(
-                    Message.session_id == session_id
-                ).order_by(Message.created_at).limit(current_count - self.max_messages + 1).all()
-                
-                for msg in oldest_messages:
-                    db.delete(msg)
-                logger.info(f"Rotated messages for session {session_id}")
             
             message = Message(
                 id=str(uuid.uuid4()),
@@ -175,7 +161,7 @@ class SessionService:
             
             db.add(message)
             
-            session.last_updated = datetime.now(timezone.utc)
+            session.last_activity = datetime.now(timezone.utc)
             
             db.commit()
             
@@ -194,7 +180,7 @@ class SessionService:
         db = next(get_db())
         try:
             session = db.query(Session).filter(
-                Session.id == session_id
+                Session.session_id == session_id
             ).first()
             
             if not session:
@@ -203,7 +189,7 @@ class SessionService:
             if update_data.title is not None:
                 session.title = update_data.title
             
-            session.last_updated = datetime.now(timezone.utc)
+            session.last_activity = datetime.now(timezone.utc)
             db.commit()
             
             logger.info(f"Updated session {session_id}")
@@ -221,7 +207,7 @@ class SessionService:
         db = next(get_db())
         try:
             session = db.query(Session).filter(
-                Session.id == session_id
+                Session.session_id == session_id
             ).first()
             
             if not session:
