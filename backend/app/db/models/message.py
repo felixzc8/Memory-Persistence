@@ -1,5 +1,5 @@
-from sqlalchemy import Column, String, Text, DateTime, JSON, Enum, ForeignKey, Mapped, mapped_column
-from sqlalchemy.orm import relationship
+from sqlalchemy import String, Text, DateTime, JSON, Enum, ForeignKey
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
 from . import Base
 

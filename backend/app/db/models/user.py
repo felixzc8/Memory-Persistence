@@ -1,11 +1,12 @@
-from sqlalchemy import Column, String, DateTime, Boolean, Mapped, mapped_column
+from sqlalchemy import String, DateTime, Boolean
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 from . import Base
 
 class User(Base):
     """User model for the users table"""
     __tablename__ = 'users'
-    
+
     user_id: Mapped[str] = mapped_column(String(255), primary_key=True, index=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
