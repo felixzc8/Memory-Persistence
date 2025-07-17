@@ -1,5 +1,5 @@
 from app.core.config import settings
-from app.db.models.memories import Memories
+from app.models.memories import Memories
 from pytidb import TiDBClient, Table
 from typing import List, Dict
 from uuid import uuid4

@@ -2,7 +2,7 @@ from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session as DBSession
 from sqlalchemy import and_, desc
 from app.db.database import get_db
-from app.db.models import Session, Message
+from app.models import Session, Message
 from app.schemas.session import (
     Session as SessionSchema, 
     SessionMessage, 
@@ -92,7 +92,6 @@ class SessionService:
                 messages=messages,
                 created_at=session.created_at,
                 last_activity=session.last_activity,
-                is_active=True,
                 message_count=len(messages)
             )
         except Exception as e:
@@ -130,7 +129,6 @@ class SessionService:
                     created_at=sess.created_at,
                     last_activity=sess.last_activity,
                     message_count=message_count,
-                    is_active=True
                 ))
             
             return summaries

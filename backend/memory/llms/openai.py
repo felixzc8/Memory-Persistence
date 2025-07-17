@@ -1,6 +1,7 @@
 from app.core.config import settings
 from typing import List, Dict, Optional
 from openai import OpenAI
+from pydantic import BaseModel
 
 class OpenAILLM:
     def __init__(self):
@@ -14,4 +15,4 @@ class OpenAILLM:
             input=input,
             text_format=text_format)
         
-        return response.output_parsed
+        return response

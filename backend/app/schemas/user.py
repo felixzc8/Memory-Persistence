@@ -9,9 +9,8 @@ class UserResponse(BaseModel):
     user_id: str = Field(..., description="Unique user identifier")
     created_at: datetime = Field(..., description="User creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
-    is_active: bool = Field(..., description="Whether user is active")
     
     model_config = ConfigDict(from_attributes=True)
 
 class UserUpdate(BaseModel):
-    is_active: Optional[bool] = Field(None, description="Updated active status")
+    pass

@@ -24,7 +24,6 @@ class Session(BaseModel):
     messages: List[SessionMessage] = Field(default=[], description="Session messages")
     created_at: datetime = Field(..., description="Session creation timestamp")
     last_activity: datetime = Field(..., description="Last activity timestamp")
-    is_active: bool = Field(default=True, description="Whether session is active")
     message_count: int = Field(default=0, description="Total message count in session")
 
 class SessionSummary(BaseModel):
@@ -34,11 +33,9 @@ class SessionSummary(BaseModel):
     created_at: datetime = Field(..., description="Session creation timestamp")
     last_activity: datetime = Field(..., description="Last activity timestamp")
     message_count: int = Field(..., description="Total message count in session")
-    is_active: bool = Field(default=True, description="Whether session is active")
 
 class UpdateSessionRequest(BaseModel):
     title: Optional[str] = Field(None, max_length=100, description="New session title")
-    is_active: Optional[bool] = Field(None, description="Session active status")
 
 class SessionListResponse(BaseModel):
     sessions: List[SessionSummary] = Field(..., description="List of user sessions")

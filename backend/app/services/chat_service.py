@@ -4,6 +4,7 @@ from app.core.config import settings
 from app.services.memory_service import memory_service
 from app.services.session_service import session_service
 from app.schemas.chat import ChatMessage, ChatResponse
+from memory.prompts import create_system_prompt
 import logging
 from datetime import datetime
 import json
@@ -47,7 +48,7 @@ class ChatService:
                 
                 yield f"event: session_created\ndata: {json.dumps({'session_id': session_id, 'title': title})}\n\n"
             
-            session_context = session_service.get_session_context(session_id, limit=15)
+            session_context = session_service.get_session_context(session_id, limit=20)
             
             memories = memory_service.search_memories(
                 query=message, 
@@ -60,7 +61,7 @@ class ChatService:
             
             yield f"event: memories_loaded\ndata: {json.dumps({'count': len(memories_used)})}\n\n"
             
-            system_prompt = self._create_system_prompt(memories_context)
+            system_prompt = self.create_system_prompt(memories_context)
             
             messages = [{"role": "system", "content": system_prompt}]
             messages.extend(session_context)
@@ -138,7 +139,7 @@ class ChatService:
             memories_context = self._format_memory_context(memories)
             memories_used = [mem['memory'] for mem in memories]
             
-            system_prompt = self._create_system_prompt(memories_context)
+            system_prompt = self.create_system_prompt(memories_context)
             
             messages = [{"role": "system", "content": system_prompt}]
             messages.extend(session_context)
@@ -180,27 +181,6 @@ class ChatService:
         
         memories_str = "\n".join(f"- {entry['memory']}" for entry in memories)
         return f"User memories:\n{memories_str}"
-    
-    def _create_system_prompt(self, memories_context: str) -> str:
-        """Create system prompt with memory context"""
-        return f"""You are a helpful and friendly assistant with persistent memory and conversation history.
-
-You have access to both:
-1. Recent conversation history in this session
-2. Long-term memories from past conversations
-
-Answer the user's question based on the conversation context and their memories.
-Be conversational, helpful, and remember to use the provided memories when relevant.
-
-{memories_context}
-
-Guidelines:
-- Be natural and conversational
-- Use the conversation history to maintain context within this session
-- Use long-term memories when they're relevant to the current conversation
-- If no memories are relevant, respond normally based on the conversation
-- Keep responses concise but informative
-- Maintain a friendly and helpful tone"""
 
     async def get_conversation_summary(self, user_id: str, limit: int = 10) -> str:
         """Get a summary of recent conversations for a user"""
@@ -230,8 +210,7 @@ Guidelines:
             response = self.client.chat.completions.create(
                 model=settings.model_choice,
                 messages=messages,
-                temperature=0.3,
-                max_tokens=500
+                temperature=0.3
             )
             
             return response.choices[0].message.content
