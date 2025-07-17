@@ -30,15 +30,10 @@ class Settings(BaseSettings):
         """Construct TiDB connection string for SQLAlchemy"""
         return f"mysql+pymysql://{self.tidb_user}:{self.tidb_password}@{self.tidb_host}:{self.tidb_port}/{self.tidb_db_name}?ssl_ca={self.tidb_ssl_ca}&ssl_verify_cert=true&ssl_verify_identity=true"
     
-    @property
-    def tidb_vector_connection_string(self) -> str:
-        """Construct TiDB connection string for TiDB Vector Store"""
-        return f"mysql+pymysql://{self.tidb_user}:{self.tidb_password}@{self.tidb_host}:{self.tidb_port}/{self.tidb_db_name}?ssl_ca={self.tidb_ssl_ca}&ssl_verify_cert=true&ssl_verify_identity=true"
     
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     debug: bool = True
-    max_session_messages: int = int(os.getenv("MAX_SESSION_MESSAGES", "20"))
     
 
 settings = Settings()

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime
+from sqlalchemy import Column, String, DateTime, Mapped, mapped_column
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from . import Base
@@ -6,10 +6,10 @@ from . import Base
 class Session(Base):
     __tablename__ = "sessions"
     
-    id = Column(String(36), primary_key=True)
-    user_id = Column(String(255), nullable=False, index=True)
-    title = Column(String(255), nullable=True)
-    created_at = Column(DateTime, server_default=func.now(), nullable=False)
-    last_updated = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    last_updated: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
     
-    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
+    messages = relationship("Message", back_populates="session", cascade="all, delete-orphan")

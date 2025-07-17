@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Boolean
+from sqlalchemy import Column, String, DateTime, Boolean, Mapped, mapped_column
 from sqlalchemy.sql import func
 from . import Base
 
@@ -6,10 +6,10 @@ class User(Base):
     """User model for the users table"""
     __tablename__ = 'users'
     
-    user_id = Column(String(255), primary_key=True, index=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
-    is_active = Column(Boolean, default=True, nullable=False)
+    user_id: Mapped[str] = mapped_column(String(255), primary_key=True, index=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     
     def __repr__(self):
         return f"<User(user_id='{self.user_id}')>"
