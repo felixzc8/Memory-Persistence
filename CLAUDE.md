@@ -197,6 +197,17 @@ TIDB_DB_NAME=           # TiDB database name
 - Terminal-style UI with MacOS aesthetic
 - Username-based authentication with localStorage persistence
 - Real-time chat with persistent memory via TiDB Vector
-- **NEW**: Streaming chat responses with Server-Sent Events (SSE)
-- **NEW**: Real-time character-by-character response rendering
+- Streaming chat responses with Server-Sent Events (SSE)
+- Real-time character-by-character response rendering
+- Session management with create, list, update, and delete operations
+- Memory search and summary functionality
+- Health check endpoints for monitoring
 - No test suite or CI/CD pipeline currently implemented
+
+## Development Best Practices
+- Always check existing patterns before adding new features
+- Use the service layer for business logic, keeping controllers thin
+- Follow the existing error handling patterns for consistency
+- Maintain the terminal aesthetic in frontend changes
+- Test endpoints manually using curl or the /docs interface
+- Ensure proper user isolation in memory operations

@@ -41,7 +41,7 @@ class MemoryService:
                             "user": settings.tidb_user,
                             "password": settings.tidb_password,
                             "database": settings.tidb_db_name,
-                            "collection_name": settings.mem0_collection_name,
+                            "collection_name": settings.memory_collection_name,
                             "embedding_model_dims": settings.embedding_model_dims,
                             "use_ssl": settings.tidb_use_ssl,
                             "verify_cert": settings.tidb_verify_cert,
