@@ -119,8 +119,8 @@ class Memory:
         Returns a list of memory content.
         """
         embedding = self.embedder.embed(query)
-        results = self.tidbvector.search(embedding, user_id)
-        
+        results = self.tidbvector.search(embedding, user_id, limit=limit)
+
         return {'results': results}
 
     def delete_all(self, user_id: str):

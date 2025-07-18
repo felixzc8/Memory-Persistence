@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
     pass
 
 app = FastAPI(
-    title="TiDB + Mem0 Chatbot API",
+    title="TiDB Vector Memory Chatbot API",
     description="A FastAPI backend for a persistent memory chatbot using OpenAI and Mem0 with TiDB Serverless with Session Management",
     version="2.0.0",
     lifespan=lifespan

@@ -104,7 +104,16 @@ class MemoryService:
         
         memories_str = "\n".join(f"- {entry['memory']}" for entry in memories)
         return f"User memories:\n{memories_str}"
-    
+
+    def format_memory_context(self, query: str, user_id: str, limit: int = None) -> str:
+        """Format memory context for the query"""
+        memories = self.search_memories(query, user_id, limit)
+        if not memories:
+            return "No relevant memories found."
+
+        memories_str = "\n".join(f"- {memory['content']}" for memory in memories)
+        return f"User memories:\n{memories_str}"
+
     def delete_memories(self, user_id: str) -> bool:
         """Delete all memories for a user"""
         try:
