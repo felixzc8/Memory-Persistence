@@ -3,11 +3,10 @@ from typing import List, Optional
 from datetime import datetime
 
 class Memory(BaseModel):
-    id: int
+    id: str
     type: str
     content: str
     status: Optional[str]
-    created_at: Optional[datetime]
     
 class MemoryResponse(BaseModel):
-    facts: List[Memory]
+    memories: List[Memory]

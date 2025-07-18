@@ -1,12 +1,11 @@
 from prompts import SYSTEM_PROMPT, FACT_EXTRACTION_PROMPT, UPDATE_MEMORY_PROMPT
 from pydantic import BaseModel
-from llms import OpenAILLM
-from embedding import OpenAIEmbeddingModel
-from tidb_vector import TiDB
+from llms.openai import OpenAILLM
+from embedding.openai import OpenAIEmbeddingModel
+from .tidb_vector import TiDBVector
 from typing import List, Dict, Optional
-from datetime import datetime
-from zoneinfo import ZoneInfo
 from schemas.memories import MemoryResponse
+from uuid import uuid4
 
 class Memory:
     def __init__(self):
@@ -16,7 +15,7 @@ class Memory:
 
         self.embedder = OpenAIEmbeddingModel()
         self.llm = OpenAILLM()
-        self.tidb = TiDB()
+        self.tidb = TiDBVector()
         self.tidb.create_table()
 
 
@@ -29,9 +28,8 @@ class Memory:
             input=messages,
             text_format=MemoryResponse
         )
-        for memory in response.memories:
-            memory['created_at'] = datetime.now(ZoneInfo("Asia/Hong_Kong"))
-            memory['status'] = 'active'
+        for memory in response["memories"]:
+            memory["id"] = str(uuid4())
         return response
     
     def _consolidate_memories(self, existing_memories: List[Dict[str, str]], new_memories: List[Dict[str, str]]) -> List[Dict[str, str]]:
@@ -48,62 +46,73 @@ class Memory:
         )
         return response
 
-    def process_messages(self, messages: List[Dict[str, str]], user_id: str) -> List[Dict[str, str]]:
+    async def process_messages(self, messages: List[Dict[str, str]], user_id: str):
         """
         Process a conversation between user and AI assistant.
         Extract memories, consolidate with existing ones, and update TiDB.
         """
-        # Extract new memories from the conversation
-        new_memories_response = self._extract_memories(messages)
-        new_memories = new_memories_response.facts
-        
-        if not new_memories:
+        try:
+            new_memories_response = self._extract_memories(messages)
+        except Exception as e:
+            print(f"Error extracting memories: {e}")
             return []
         
-        # Get existing memories for the user by searching with embeddings
+        new_memories = new_memories_response
+        if not new_memories or not new_memories.get('memories'):
+            return []
+        
         existing_memories = []
-        for memory in new_memories:
-            # Generate embedding for the memory content
-            embedding = self.embedder.embed_query(memory.content)
-            # Search for similar existing memories
-            similar_memories = self.tidb.search(embedding, limit=10)
+        for memory in new_memories['memories']:
+            try:
+                embedding = self.embedder.embed(memory['content'])
+                similar_memories = self.tidb.search(embedding, user_id, limit=10)
+            except Exception as e:
+                print(f"Error processing memory embedding/search: {e}")
+                continue
             
-            # Filter by user_id and convert to dict format
-            user_memories = []
             for mem in similar_memories:
-                if mem.user_id == user_id:
-                    user_memories.append({
-                        'id': mem.id,
-                        'content': mem.payload.get('content', ''),
-                        'type': mem.payload.get('type', ''),
-                        'status': mem.payload.get('status', 'active'),
-                        'created_at': mem.created_at
-                    })
-            existing_memories.extend(user_memories)
+                existing_memories.append({
+                    'id': mem.id,
+                    'content': mem.content,
+                    'type': mem.metadata.get('type', '') if mem.metadata else '',
+                    'status': mem.metadata.get('status', 'active') if mem.metadata else 'active',
+                    'created_at': mem.created_at
+                })
         
-        # Consolidate new memories with existing ones
-        consolidated_response = self._consolidate_memories(existing_memories, [m.dict() for m in new_memories])
-        consolidated_memories = consolidated_response.facts
+        try:
+            consolidated_response = self._consolidate_memories(existing_memories, new_memories['memories'])
+        except Exception as e:
+            print(f"Error consolidating memories: {e}")
+            return []
         
-        # Update TiDB with consolidated memories
+        consolidated_memories = consolidated_response['memories']
         for memory in consolidated_memories:
-            memory_dict = memory.dict() if hasattr(memory, 'dict') else memory
-            embedding = self.embedder.embed_query(memory_dict['content'])
+            try:
+                memory_dict = memory.dict() if hasattr(memory, 'dict') else memory
+                embedding = self.embedder.embed(memory_dict['content'])
+            except Exception as e:
+                print(f"Error processing memory for storage: {e}")
+                continue
             
-            payload = {
-                'content': memory_dict['content'],
-                'type': memory_dict['type'],
-                'status': memory_dict.get('status', 'active'),
-                'user_id': user_id
-            }
-            
-            # Check if this is an update to existing memory or new memory
             if 'id' in memory_dict and memory_dict['id']:
-                # Update existing memory
-                self.tidb.update(memory_dict['id'], embedding, payload)
+                try:
+                    self.tidb.update(
+                        id=memory_dict['id'],
+                        vector=embedding,
+                        content=memory_dict['content'],
+                        metadata={'type': memory_dict['type'], 'status': memory_dict.get('status', 'active')}
+                    )
+                except Exception as e:
+                    print(f"Error updating memory: {e}")
+                    continue
             else:
-                # Insert new memory
-                self.tidb.insert(embedding, payload)
-        
-        return [m.dict() if hasattr(m, 'dict') else m for m in consolidated_memories]
-
+                try:
+                    self.tidb.insert(
+                        vector=embedding,
+                        user_id=user_id,
+                        content=memory_dict['content'],
+                        metadata={'type': memory_dict['type'], 'status': memory_dict.get('status', 'active')}
+                    )
+                except Exception as e:
+                    print(f"Error inserting memory: {e}")
+                    continue

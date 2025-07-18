@@ -34,23 +34,23 @@ Memory Types: use a single word descriptor for each memory type, such as: person
 
 Here are some few shot examples:
 
-Input: [{{"id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "role": "user", "content": "Hi"}},
-{{"id": "b2c3d4e5-f6g7-8901-bcde-f23456789012", "role": "assistant", "content": "Hello! How can I help you today?"}},
-{{"id": "c3d4e5f6-g7h8-9012-cdef-345678901234", "role": "user", "content": "There are branches in trees"}},
-{{"id": "d4e5f6g7-h8i9-0123-defg-456789012345", "role": "assistant", "content": "Yes, trees have branches that grow from the trunk and main stems."}}]
+Input: [{{"role": "user", "content": "Hi"}},
+{{"role": "assistant", "content": "Hello! How can I help you today?"}},
+{{"role": "user", "content": "There are branches in trees"}},
+{{"role": "assistant", "content": "Yes, trees have branches that grow from the trunk and main stems."}}]
 Output: {{"memories" : []}}
 
-Input: [{{"id": "e5f6g7h8-i9j0-1234-efgh-567890123456", "role": "user", "content": "Hi, I am looking for a restaurant in San Francisco"}},
-{{"id": "f6g7h8i9-j0k1-2345-fghi-678901234567", "role": "assistant", "content": "I'd be happy to help you find a restaurant in San Francisco. What type of cuisine are you interested in?"}},
-{{"id": "g7h8i9j0-k1l2-3456-ghij-789012345678", "role": "user", "content": "Japanese"}},
-{{"id": "h8i9j0k1-l2m3-4567-hijk-890123456789", "role": "assistant", "content": "Great choice! Japanese cuisine is wonderful. I can help you find some excellent Japanese restaurants in San Francisco. Are you looking for sushi, ramen, or a particular type of Japanese food?"}}]
+Input: [{{"role": "user", "content": "Hi, I am looking for a restaurant in San Francisco"}},
+{{"role": "assistant", "content": "I'd be happy to help you find a restaurant in San Francisco. What type of cuisine are you interested in?"}},
+{{"role": "user", "content": "Japanese"}},
+{{"role": "assistant", "content": "Great choice! Japanese cuisine is wonderful. I can help you find some excellent Japanese restaurants in San Francisco. Are you looking for sushi, ramen, or a particular type of Japanese food?"}}]
 Output: {{"memories" : [{{"content": "Looking for a restaurant in San Francisco", "type": "activity"}},
 {{"content": "Prefers Japanese cuisine", "type": "preference"}}]}}
 
-Input: [{{"id": "i9j0k1l2-m3n4-5678-ijkl-901234567890", "role": "user", "content": "Hi, my name is John. I am a software engineer"}},
-{{"id": "j0k1l2m3-n4o5-6789-jklm-012345678901", "role": "assistant", "content": "Nice to meet you, John! Software engineering is a fascinating field. What kind of projects do you work on?"}},
-{{"id": "k1l2m3n4-o5p6-7890-klmn-123456789012", "role": "user", "content": "My favourite movies are Inception and Interstellar"}},
-{{"id": "l2m3n4o5-p6q7-8901-lmno-234567890123", "role": "assistant", "content": "Great taste in movies! Both Inception and Interstellar are Christopher Nolan films with complex narratives and stunning visuals."}}]
+Input: [{{"role": "user", "content": "Hi, my name is John. I am a software engineer"}},
+{{"role": "assistant", "content": "Nice to meet you, John! Software engineering is a fascinating field. What kind of projects do you work on?"}},
+{{"role": "user", "content": "My favourite movies are Inception and Interstellar"}},
+{{"role": "assistant", "content": "Great taste in movies! Both Inception and Interstellar are Christopher Nolan films with complex narratives and stunning visuals."}}]
 Output: {{"memories" : [{{"content": "Name is John", "type": "personal"}},
 {{"content": "Is a Software engineer", "type": "professional"}},
 {{"content": "Favourite movies are Inception and Interstellar", "type": "preference"}}]}}
@@ -86,33 +86,32 @@ Your task is to consolidate these memories using the following rules:
 
 **Memory JSON Structure:**
 Each memory should have:
+- id: Unique identifier (UUID)
 - content: The memory text
 - type: Memory classification (personal, preference, activity, plan, health, professional, miscellaneous)
 - status: "active" (default) or "outdated"
-- created_at: ISO timestamp (preserved from input when present)
 
 **Examples:**
 
 Input:
-Existing memories: [{{"content": "Name is John", "type": "personal", "created_at": "2024-01-01T10:00:00", "status": "active"}}]
-New memories: [{{"content": "Name is Jane", "type": "personal", "status": "active"}}]
-Output: {{"memories": [{{"content": "Name is Jane", "type": "personal", "status": "active"}}]}}
+Existing memories: [{{"id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "content": "Name is John", "type": "personal", "status": "active"}}]
+New memories: [{{"id": "b2c3d4e5-f6g7-8901-bcde-f23456789012", "content": "Name is Jane", "type": "personal", "status": "active"}}]
+Output: {{"memories": [{{"id": "b2c3d4e5-f6g7-8901-bcde-f23456789012", "content": "Name is Jane", "type": "personal", "status": "active"}}]}}
 
 Input:
-Existing memories: [{{"content": "Loves pizza", "type": "preference", "created_at": "2024-01-01T10:00:00", "status": "active"}}]
-New memories: [{{"content": "Dislikes pizza now", "type": "preference", "status": "active"}}]
-Output: {{"memories": [{{"content": "Loves pizza", "type": "preference", "created_at": "2024-01-01T10:00:00", "status": "outdated"}}, {{"content": "Dislikes pizza", "type": "preference", "status": "active"}}]}}
+Existing memories: [{{"id": "c3d4e5f6-g7h8-9012-cdef-345678901234", "content": "Loves pizza", "type": "preference", "status": "active"}}]
+New memories: [{{"id": "d4e5f6g7-h8i9-0123-defg-456789012345", "content": "Dislikes pizza now", "type": "preference", "status": "active"}}]
+Output: {{"memories": [{{"id": "c3d4e5f6-g7h8-9012-cdef-345678901234", "content": "Loves pizza", "type": "preference", "status": "outdated"}}, {{"id": "d4e5f6g7-h8i9-0123-defg-456789012345", "content": "Dislikes pizza", "type": "preference", "status": "active"}}]}}
 
 Input:
-Existing memories: [{{"content": "Works as engineer", "type": "professional", "created_at": "2024-01-01T10:00:00", "status": "active"}}]
-New memories: [{{"content": "Had lunch with Sarah", "type": "activity", "status": "active"}}]
-Output: {{"memories": [{{"content": "Works as engineer", "type": "professional", "created_at": "2024-01-01T10:00:00", "status": "active"}}, {{"content": "Had lunch with Sarah", "type": "activity", "status": "active"}}]}}
+Existing memories: [{{"id": "e5f6g7h8-i9j0-1234-efgh-567890123456", "content": "Works as engineer", "type": "professional", "status": "active"}}]
+New memories: [{{"id": "f6g7h8i9-j0k1-2345-fghi-678901234567", "content": "Had lunch with Sarah", "type": "activity", "status": "active"}}]
+Output: {{"memories": [{{"id": "e5f6g7h8-i9j0-1234-efgh-567890123456", "content": "Works as engineer", "type": "professional", "status": "active"}}, {{"id": "f6g7h8i9-j0k1-2345-fghi-678901234567", "content": "Had lunch with Sarah", "type": "activity", "status": "active"}}]}}
 
 **Instructions:**
-- Preserve all memory fields (content, type, created_at, status)
+- Preserve all memory fields (id, content, type, status, created_at when present)
 - Default status is "active" for new memories
 - Only mark memories as "outdated" when there's a clear preference/status change
-- Ensure no duplicate active memories for the same fact
-- Return consolidated memories in JSON format with "memories" key
+- Ensure no duplicate active memories
 """
 
