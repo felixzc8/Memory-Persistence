@@ -1,10 +1,10 @@
 from .prompts import SYSTEM_PROMPT, FACT_EXTRACTION_PROMPT, MEMORY_CONSOLIDATION_PROMPT
 from pydantic import BaseModel
-from llms.openai import OpenAILLM
-from embedding.openai import OpenAIEmbeddingModel
+from .llms.openai import OpenAILLM
+from .embedding.openai import OpenAIEmbeddingModel
 from .tidb_vector import TiDBVector
 from typing import List, Dict
-from schemas.memories import MemoryResponse
+from .schemas.memories import MemoryResponse
 from uuid import uuid4
 import logging
 
@@ -21,7 +21,7 @@ class Memory:
         self.logger = logging.getLogger(__name__)
 
 
-    async def _extract_memories(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    def _extract_memories(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
         """
         Extract memories from a list of messages using the fact extraction prompt.
         """
@@ -34,7 +34,7 @@ class Memory:
             memory["id"] = str(uuid4())
         return response
     
-    async def _consolidate_memories(self, existing_memories: List[Dict[str, str]], new_memories: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    def _consolidate_memories(self, existing_memories: List[Dict[str, str]], new_memories: List[Dict[str, str]]) -> List[Dict[str, str]]:
         """
         Resolve new memories against existing ones using the fact update memory prompt.
         """
@@ -48,7 +48,7 @@ class Memory:
         ).output_parsed
         return response
 
-    async def process_messages(self, messages: List[Dict[str, str]], user_id: str):
+    def process_messages(self, messages: List[Dict[str, str]], user_id: str):
         """
         Process a conversation between user and AI assistant.
         Extract memories, consolidate with existing ones, and update TiDB.
@@ -63,7 +63,7 @@ class Memory:
         
         return self._store_consolidated_memories(consolidated_response['memories'], user_id)
 
-    async def _find_similar_memories(self, new_memories: List[Dict[str, str]], user_id: str) -> List[Dict[str, str]]:
+    def _find_similar_memories(self, new_memories: List[Dict[str, str]], user_id: str) -> List[Dict[str, str]]:
         """
         Find similar memories for each new memory to support consolidation.
         """
@@ -84,7 +84,7 @@ class Memory:
         
         return existing_memories
 
-    async def _store_consolidated_memories(self, consolidated_memories: List[Dict[str, str]], user_id: str) -> List[Dict[str, str]]:
+    def _store_consolidated_memories(self, consolidated_memories: List[Dict[str, str]], user_id: str) -> List[Dict[str, str]]:
         """
         Store consolidated memories in TiDB. Handles new memories and updates.
         """
@@ -113,7 +113,7 @@ class Memory:
         
         return stored_memories
 
-    async def search(self, query: str, user_id: str, limit: int = 10) -> Dict:
+    def search(self, query: str, user_id: str, limit: int = 10) -> Dict:
         """
         Search for memories based on a query string.
         Returns a list of memory content.
@@ -123,7 +123,7 @@ class Memory:
         
         return {'results': results}
 
-    async def delete_all(self, user_id: str):
+    def delete_all(self, user_id: str):
         """
         Delete all memories for a user.
         """

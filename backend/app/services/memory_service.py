@@ -1,7 +1,7 @@
 from mem0 import Memory
 from typing import List, Dict, Any
 from app.core.config import settings
-from app.core.exceptions import DatabaseException, ChatException
+from app.core.exceptions import ChatException
 import logging
 import ssl
 
@@ -75,93 +75,53 @@ class MemoryService:
             self.initialization_error = "Missing OpenAI API key or TiDB configuration"
             logger.error(f"Memory service not initialized: {self.initialization_error}")
     
+    
     def search_memories(self, query: str, user_id: str, limit: int = None) -> List[Dict[str, Any]]:
         """Search for relevant memories based on query"""
-        if not self.memory:
-            raise DatabaseException(
-                f"Memory service not initialized: {self.initialization_error or 'Unknown error'}",
-                error_code="MEMORY_SERVICE_UNAVAILABLE",
-                details={"user_id": user_id, "initialization_error": self.initialization_error}
-            )
-            
         try:
             limit = limit or settings.memory_search_limit
             result = self.memory.search(query=query, user_id=user_id, limit=limit)
             return result.get("results", [])
         except Exception as e:
             logger.error(f"Error searching memories for user {user_id}: {e}")
-            raise ChatException(
-                f"Memory search failed for user {user_id}",
-                error_code="MEMORY_SEARCH_FAILED",
-                details={"user_id": user_id, "query": query, "error": str(e)}
-            )
+            raise ChatException(f"Memory search failed for user {user_id}") from e
     
     def add_memory(self, messages: List[Dict[str, str]], user_id: str) -> bool:
         """Add conversation to memory"""
-        if not self.memory:
-            raise DatabaseException(
-                f"Memory service not initialized: {self.initialization_error or 'Unknown error'}",
-                error_code="MEMORY_SERVICE_UNAVAILABLE",
-                details={"user_id": user_id, "initialization_error": self.initialization_error}
-            )
-            
         try:
             self.memory.add(messages, user_id=user_id)
             logger.info(f"Added memory for user {user_id}")
             return True
         except Exception as e:
             logger.error(f"Error adding memory for user {user_id}: {e}")
-            raise ChatException(
-                f"Memory add failed for user {user_id}",
-                error_code="MEMORY_ADD_FAILED",
-                details={"user_id": user_id, "error": str(e)}
-            )
+            raise ChatException(f"Memory add failed for user {user_id}") from e
     
     def get_memory_context(self, query: str, user_id: str, limit: int = None) -> str:
         """Get formatted memory context for the query"""
-        try:
-            memories = self.search_memories(query, user_id, limit)
-            if not memories:
-                return "No relevant memories found."
-            
-            memories_str = "\n".join(f"- {entry['memory']}" for entry in memories)
-            return f"User memories:\n{memories_str}"
-        except (DatabaseException, ChatException):
-            raise
-        except Exception as e:
-            logger.error(f"Error getting memory context for user {user_id}: {e}")
-            raise ChatException(
-                f"Memory context retrieval failed for user {user_id}",
-                error_code="MEMORY_CONTEXT_FAILED",
-                details={"user_id": user_id, "query": query, "error": str(e)}
-            )
+        memories = self.search_memories(query, user_id, limit)
+        if not memories:
+            return "No relevant memories found."
+        
+        memories_str = "\n".join(f"- {entry['memory']}" for entry in memories)
+        return f"User memories:\n{memories_str}"
     
     def delete_memories(self, user_id: str) -> bool:
         """Delete all memories for a user"""
-        if not self.memory:
-            raise DatabaseException(
-                f"Memory service not initialized: {self.initialization_error or 'Unknown error'}",
-                error_code="MEMORY_SERVICE_UNAVAILABLE",
-                details={"user_id": user_id, "initialization_error": self.initialization_error}
-            )
-            
         try:
             self.memory.delete_all(user_id=user_id)
             logger.info(f"Deleted memories for user {user_id}")
             return True
         except Exception as e:
             logger.error(f"Error deleting memories for user {user_id}: {e}")
-            raise ChatException(
-                f"Memory delete failed for user {user_id}",
-                error_code="MEMORY_DELETE_FAILED",
-                details={"user_id": user_id, "error": str(e)}
-            )
+            raise ChatException(f"Memory delete failed for user {user_id}") from e
     
     def get_vector_store_health(self) -> Dict[str, Any]:
         """Check native TiDB Vector Store health"""
         if not self.memory:
-            error_msg = f"Memory service not initialized: {self.initialization_error or 'Unknown error'}"
-            return {"status": "unhealthy", "message": error_msg}
+            return {
+                "status": "unhealthy", 
+                "message": f"Memory service not initialized: {self.initialization_error or 'Unknown error'}"
+            }
         
         try:
             vector_store_config = self.config.get("vector_store", {}).get("config", {})
