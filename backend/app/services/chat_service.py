@@ -50,13 +50,17 @@ class ChatService:
             
             session_context = session_service.get_session_context(session_id, limit=20)
             
-            memories = memory_service.search_memories(
+            memories_context = memory_service.get_memory_context(
                 query=message, 
                 user_id=user_id, 
                 limit=5
             )
             
-            memories_context = self._format_memory_context(memories)
+            memories = memory_service.search_memories(
+                query=message, 
+                user_id=user_id, 
+                limit=5
+            )
             memories_used = [mem['memory'] for mem in memories]
             
             yield f"event: memories_loaded\ndata: {json.dumps({'count': len(memories_used)})}\n\n"
@@ -130,13 +134,17 @@ class ChatService:
             
             session_context = session_service.get_session_context(session_id, limit=15)
             
-            memories = memory_service.search_memories(
+            memories_context = memory_service.get_memory_context(
                 query=message, 
                 user_id=user_id, 
                 limit=5
             )
             
-            memories_context = self._format_memory_context(memories)
+            memories = memory_service.search_memories(
+                query=message, 
+                user_id=user_id, 
+                limit=5
+            )
             memories_used = [mem['memory'] for mem in memories]
             
             system_prompt = self.create_system_prompt(memories_context)
@@ -174,13 +182,6 @@ class ChatService:
             logger.error(f"Error in chat_with_memory for user {user_id}: {e}")
             raise
     
-    def _format_memory_context(self, memories: List[Dict]) -> str:
-        """Format memories into a context string"""
-        if not memories:
-            return "No relevant memories found."
-        
-        memories_str = "\n".join(f"- {entry['memory']}" for entry in memories)
-        return f"User memories:\n{memories_str}"
 
     async def get_conversation_summary(self, user_id: str, limit: int = 10) -> str:
         """Get a summary of recent conversations for a user"""

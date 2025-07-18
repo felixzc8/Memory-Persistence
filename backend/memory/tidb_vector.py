@@ -37,7 +37,7 @@ class TiDBVector:
         logger.info(f"Inserted memory: {id}, user_id: {user_id}, content: {content[:50]}...")
         return id
     
-    def search(self, query_vector: List[float], user_id: str, limit: int = settings.memory_search_limit) -> List[Memories]:
+    def search(self, query_vector: List[float], user_id: str, limit: int) -> List[Memories]:
         """
         Search for memories similar to the query vector
         """
@@ -92,7 +92,7 @@ class TiDBVector:
         logger.info(f"Retrieved {len(results)} memories for user: {user_id}")
         return results
     
-    def delete_by_user(self, user_id: str):
+    def delete_all(self, user_id: str):
         """
         Delete all memories for a specific user
         """

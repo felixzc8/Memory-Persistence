@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     model_choice: str = os.getenv("MODEL_CHOICE", "gpt-4o-mini")
+    embedding_model: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
     
     tidb_host: str = os.getenv("TIDB_HOST", "")
     tidb_port: int = int(os.getenv("TIDB_PORT", 4000))
@@ -23,7 +24,6 @@ class Settings(BaseSettings):
     tidb_ssl_ca: Optional[str] = ssl.get_default_verify_paths().cafile
     embedding_model_dims: int = 1536
     memory_collection_name: str = "mem0"
-    memory_search_limit: int = 50
     
     @property
     def tidb_connection_string(self) -> str:

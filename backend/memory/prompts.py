@@ -69,20 +69,20 @@ Following is a conversation between the user and the assistant. You have to extr
 You should detect the language of the user input and record the memories in the same language.
 """
 
-MEMORY_CONSOLIDATION_PROMPT = f"""You are a memory consolidation system responsible for integrating new memories with existing memories. You will receive two lists of memory JSON objects:
+MEMORY_CONSOLIDATION_PROMPT = f"""You are a memory consolidation system responsible for identifying new memories and memory updates from recent conversations. You will receive two lists of memory JSON objects:
 
 1. Existing memories: Previously stored memories from the user's history
 2. New memories: Newly extracted memories from recent conversations
 
-Your task is to consolidate these memories using the following rules:
+Your task is to return ONLY the memories that should be added or updated, using the following rules:
 
 **Consolidation Rules:**
 
-1. **Append Unrelated**: If a new memory is completely unrelated to any existing memory, append it to the final list.
+1. **New Memories**: Return new memories that do not conflict with existing memories.
 
-2. **Correction/Misremembering**: If the user is correcting a previous memory (e.g., "Actually, my name is Jane, not John"), discard the old memory and keep only the new corrected memory.
-
-3. **Status Change/Evolution**: If a memory reflects a change in preference or status (e.g., "I used to like pizza but now I don't"), mark the old memory with status "outdated" and add the new memory with status "active".
+2. **Updated Memories**: Return updated memories when:
+   - The user is correcting a previous memory (e.g., "Actually, my name is Jane, not John")
+   - The user's preference or status has changed (e.g., "I used to like pizza but now I don't")
 
 **Memory JSON Structure:**
 Each memory should have:
@@ -101,17 +101,18 @@ Output: {{"memories": [{{"id": "b2c3d4e5-f6g7-8901-bcde-f23456789012", "content"
 Input:
 Existing memories: [{{"id": "c3d4e5f6-g7h8-9012-cdef-345678901234", "content": "Loves pizza", "type": "preference", "status": "active"}}]
 New memories: [{{"id": "d4e5f6g7-h8i9-0123-defg-456789012345", "content": "Dislikes pizza now", "type": "preference", "status": "active"}}]
-Output: {{"memories": [{{"id": "c3d4e5f6-g7h8-9012-cdef-345678901234", "content": "Loves pizza", "type": "preference", "status": "outdated"}}, {{"id": "d4e5f6g7-h8i9-0123-defg-456789012345", "content": "Dislikes pizza", "type": "preference", "status": "active"}}]}}
+Output: {{"memories": [{{"id": "c3d4e5f6-g7h8-9012-cdef-345678901234", "content": "Loves pizza", "type": "preference", "status": "outdated"}}, {{"id": "d4e5f6g7-h8i9-0123-defg-456789012345", "content": "Dislikes pizza now", "type": "preference", "status": "active"}}]}}
 
 Input:
 Existing memories: [{{"id": "e5f6g7h8-i9j0-1234-efgh-567890123456", "content": "Works as engineer", "type": "professional", "status": "active"}}]
 New memories: [{{"id": "f6g7h8i9-j0k1-2345-fghi-678901234567", "content": "Had lunch with Sarah", "type": "activity", "status": "active"}}]
-Output: {{"memories": [{{"id": "e5f6g7h8-i9j0-1234-efgh-567890123456", "content": "Works as engineer", "type": "professional", "status": "active"}}, {{"id": "f6g7h8i9-j0k1-2345-fghi-678901234567", "content": "Had lunch with Sarah", "type": "activity", "status": "active"}}]}}
+Output: {{"memories": [{{"id": "f6g7h8i9-j0k1-2345-fghi-678901234567", "content": "Had lunch with Sarah", "type": "activity", "status": "active"}}]}}
 
 **Instructions:**
+- Return only new memories that don't conflict with existing ones
+- Return updated memories (both outdated and new versions) when there are corrections or changes
 - Preserve all memory fields (id, content, type, status, created_at when present)
 - Default status is "active" for new memories
-- Only mark memories as "outdated" when there's a clear preference/status change
-- Ensure no duplicate active memories
+- Mark conflicting existing memories as "outdated" when returning updates
 """
 

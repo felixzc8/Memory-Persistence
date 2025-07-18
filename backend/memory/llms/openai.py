@@ -9,7 +9,7 @@ class OpenAILLM:
         self.client = OpenAI(api_key=settings.openai_api_key)
 
     def generate_response(self, instructions: str, input: List[Dict[str, str]], text_format: str = None):
-        response = self.client.responses.create(
+        response = self.client.responses.parse(
             model=self.model,
             instructions=instructions,
             input=input,
