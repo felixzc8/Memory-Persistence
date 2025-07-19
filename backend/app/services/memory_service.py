@@ -1,9 +1,8 @@
-from mem0 import Memory
+from memory.timem import TiMem
 from typing import List, Dict, Any
 from app.core.config import settings
 from app.core.exceptions import ChatException
 import logging
-import ssl
 
 logger = logging.getLogger(__name__)
 
@@ -11,69 +10,7 @@ class MemoryService:
     """Service for managing persistent memory using Mem0 and native TiDB Vector"""
     
     def __init__(self):
-        self.memory = None
-        self.initialization_error = None
-        
-        if settings.openai_api_key and settings.tidb_host:
-            try:
-                logger.info(f"Initializing memory service with TiDB: {settings.tidb_host}:{settings.tidb_port}")
-                
-                self.config = {
-                    "llm": {
-                        "provider": "openai",
-                        "config": {
-                            "model": settings.model_choice,
-                            "api_key": settings.openai_api_key
-                        }
-                    },
-                    "embedder": {
-                        "provider": "openai",
-                        "config": {
-                            "model": "text-embedding-3-small",
-                            "api_key": settings.openai_api_key
-                        }
-                    },
-                    "vector_store": {
-                        "provider": "tidb",
-                        "config": {
-                            "host": settings.tidb_host,
-                            "port": settings.tidb_port,
-                            "user": settings.tidb_user,
-                            "password": settings.tidb_password,
-                            "database": settings.tidb_db_name,
-                            "collection_name": settings.memory_collection_name,
-                            "embedding_model_dims": settings.embedding_model_dims,
-                            "use_ssl": settings.tidb_use_ssl,
-                            "verify_cert": settings.tidb_verify_cert,
-                            "ssl_ca": settings.tidb_ssl_ca
-                        }
-                    }
-                }
-                
-                self.memory = Memory.from_config(self.config)
-                logger.info("Memory service initialized successfully with native TiDB Vector")
-                
-            except ImportError as e:
-                self.initialization_error = f"Missing dependency: {str(e)}"
-                logger.error(f"Memory service import error: {self.initialization_error}")
-                
-            except ConnectionError as e:
-                self.initialization_error = f"Database connection failed: {str(e)}"
-                logger.error(f"Memory service connection error: {self.initialization_error}")
-                
-            except ssl.SSLError as e:
-                self.initialization_error = f"SSL connection failed: {str(e)}"
-                logger.error(f"Memory service SSL error: {self.initialization_error}")
-                
-            except Exception as e:
-                self.initialization_error = f"Initialization failed: {str(e)}"
-                logger.error(f"Memory service error: {self.initialization_error}")
-                import traceback
-                logger.error(f"Full traceback: {traceback.format_exc()}")
-                
-        else:
-            self.initialization_error = "Missing OpenAI API key or TiDB configuration"
-            logger.error(f"Memory service not initialized: {self.initialization_error}")
+        self.memory = TiMem()
     
     
     def search_memories(self, query: str, user_id: str, limit: int = None) -> List[Dict[str, Any]]:
@@ -89,7 +26,8 @@ class MemoryService:
     def add_memory(self, messages: List[Dict[str, str]], user_id: str) -> bool:
         """Add conversation to memory"""
         try:
-            self.memory.add(messages, user_id=user_id)
+            logger.info(f"Memory service add_memory called for user {user_id}")
+            self.memory.process_messages(messages, user_id=user_id)
             logger.info(f"Added memory for user {user_id}")
             return True
         except Exception as e:
@@ -97,21 +35,12 @@ class MemoryService:
             raise ChatException(f"Memory add failed for user {user_id}") from e
     
     def get_memory_context(self, query: str, user_id: str, limit: int = None) -> str:
-        """Get formatted memory context for the query"""
-        memories = self.search_memories(query, user_id, limit)
-        if not memories:
-            return "No relevant memories found."
-        
-        memories_str = "\n".join(f"- {entry['memory']}" for entry in memories)
-        return f"User memories:\n{memories_str}"
-
-    def format_memory_context(self, query: str, user_id: str, limit: int = None) -> str:
         """Format memory context for the query"""
         memories = self.search_memories(query, user_id, limit)
         if not memories:
             return "No relevant memories found."
 
-        memories_str = "\n".join(f"- {memory['content']}" for memory in memories)
+        memories_str = "\n".join(f"- {memory.get('memory', memory.get('content', ''))}" for memory in memories)
         return f"User memories:\n{memories_str}"
 
     def delete_memories(self, user_id: str) -> bool:

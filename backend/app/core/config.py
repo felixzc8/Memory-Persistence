@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     tidb_verify_cert: bool = True
     tidb_ssl_ca: Optional[str] = ssl.get_default_verify_paths().cafile
     embedding_model_dims: int = 1536
-    memory_collection_name: str = "mem0"
+    memory_collection_name: str = "memories"
     
     @property
     def tidb_connection_string(self) -> str:
