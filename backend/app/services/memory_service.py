@@ -1,4 +1,4 @@
-from memory.timem import TiMem
+from memory.timemory import TiMem
 from typing import List, Dict, Any
 from app.core.config import settings
 from app.core.exceptions import ChatException

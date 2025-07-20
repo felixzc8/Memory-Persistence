@@ -22,8 +22,9 @@ npm install
 ### Running the Application
 ```bash
 # Terminal 1: Start backend (from backend directory)
-python run.py
-# Alternative: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+# Alternative: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+# Alternative: python -m app.main
 
 # Terminal 2: Start frontend (from frontend directory)
 npm run dev

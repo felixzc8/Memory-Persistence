@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     api_port: int = 8000
     debug: bool = True
     
+    logfire_token: Optional[str] = os.getenv("LOGFIRE_TOKEN")
+    
 
 settings = Settings()
 
