@@ -5,10 +5,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Backend (FastAPI + Python)
-- `cd backend && python app/main.py` - Run the backend server directly
-- `cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload` - Run with uvicorn in reload mode
+- `cd backend && uv run python app/main.py` - Run the backend server directly
+- `cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload` - Run with uvicorn in reload mode
 - `cd backend && uv install` - Install dependencies using uv package manager
-- `cd backend && pip install -r requirements.txt` - Install dependencies using pip
+- `cd backend && uv sync` - Sync virtual environment with lock file
 
 ### Frontend (React + Vite)  
 - `cd frontend && npm run dev` - Start development server
