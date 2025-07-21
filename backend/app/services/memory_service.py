@@ -1,7 +1,9 @@
-from memory.timemory import TiMem
+from TiMemory import TiMemory
+from TiMemory.models import Memory
 from typing import List, Dict, Any
 from app.core.config import settings
 from app.core.exceptions import ChatException
+from app.db.database import SessionLocal, create_tables
 import logging
 
 logger = logging.getLogger(__name__)
@@ -10,7 +12,12 @@ class MemoryService:
     """Service for managing persistent memory using Mem0 and native TiDB Vector"""
     
     def __init__(self):
-        self.memory = TiMem()
+        self.memory = TiMemory(
+            config=settings,
+            db_session_factory=SessionLocal,
+            memory_model=Memory,
+            create_tables_func=create_tables
+        )
     
     
     def search_memories(self, query: str, user_id: str, limit: int = None) -> List[Dict[str, Any]]:
