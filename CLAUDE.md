@@ -7,9 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Backend Setup
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
+uv sync
 cp .env.example .env  # Then edit with your values
 ```
 
@@ -22,9 +20,9 @@ npm install
 ### Running the Application
 ```bash
 # Terminal 1: Start backend (from backend directory)
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-# Alternative: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-# Alternative: python -m app.main
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+# Alternative: uv run python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+# Alternative: uv run python -m app.main
 
 # Terminal 2: Start frontend (from frontend directory)
 npm run dev
