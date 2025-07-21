@@ -16,3 +16,4 @@ typing-extensions==4.14.0
 pytidb
 
 logfire
+logfire[sqlalchemy]
