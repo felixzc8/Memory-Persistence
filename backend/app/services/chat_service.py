@@ -60,7 +60,7 @@ class ChatService:
                 user_id=user_id, 
                 limit=5
             )
-            memories_used = [getattr(mem, 'content', mem.get('memory', mem.get('content', ''))) for mem in memories]
+            memories_used = [mem.content for mem in memories]
             
             yield f"event: memories_loaded\ndata: {json.dumps({'count': len(memories_used)})}\n\n"
             
@@ -144,7 +144,7 @@ class ChatService:
                 user_id=user_id, 
                 limit=5
             )
-            memories_used = [getattr(mem, 'content', mem.get('memory', mem.get('content', ''))) for mem in memories]
+            memories_used = [mem.content for mem in memories]
             
             system_prompt = self.create_system_prompt(memories_context)
             

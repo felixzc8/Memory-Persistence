@@ -51,7 +51,6 @@ class TiDBVector:
         Search for memories similar to the query vector using cosine similarity
         """
         with SessionLocal() as db:
-            # Use vector similarity search with cosine distance
             results = db.query(Memory).filter(
                 Memory.user_id == user_id
             ).order_by(

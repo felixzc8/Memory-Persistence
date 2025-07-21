@@ -31,14 +31,13 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-if settings.logfire_token:
-    logfire.configure(token=settings.logfire_token)
-    basicConfig(handlers=[logfire.LogfireLoggingHandler()])
-    logfire.instrument_fastapi(app, capture_headers=True)
-    logging.info("Logfire configured successfully")
-else:
-    basicConfig(level=logging.INFO)
-    logging.warning("LOGFIRE_TOKEN not set, using console logging")
+logfire.configure(token=settings.logfire_token)
+basicConfig(handlers=[logfire.LogfireLoggingHandler()], level=logging.INFO)
+logfire.instrument_fastapi(app, capture_headers=True)
+
+
+logger = logging.getLogger(__name__)
+logger.info("logger test")
 
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(

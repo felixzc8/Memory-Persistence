@@ -40,7 +40,7 @@ class MemoryService:
         if not memories:
             return "No relevant memories found."
 
-        memories_str = "\n".join(f"- {memory.get('memory', memory.get('content', ''))}" for memory in memories)
+        memories_str = "\n".join(f"- {memory.content}" for memory in memories)
         return f"User memories:\n{memories_str}"
 
     def delete_memories(self, user_id: str) -> bool:
