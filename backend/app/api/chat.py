@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from app.schemas.chat import (
     ChatRequest, 
@@ -8,12 +8,12 @@ from app.schemas.chat import (
 )
 from app.schemas.session import (
     Session,
-    SessionSummary,
     SessionListResponse,
     UpdateSessionRequest
 )
 from app.services.chat_service import chat_service
 from app.services.memory_service import memory_service
+from app.dependencies.memory import get_available_memory_service
 from app.services.session_service import session_service
 from app.services.user_service import user_service
 from app.dependencies.auth import get_authenticated_user
@@ -98,13 +98,17 @@ async def delete_user_session(user_id: str, session_id: str):
     return {"message": "Session deleted successfully"}
 
 @router.post("/{user_id}/memories/search", response_model=MemorySearchResponse)
-async def search_user_memories(user_id: str, request: MemorySearchRequest):
+async def search_user_memories(
+    user_id: str, 
+    request: MemorySearchRequest,
+    memory_svc = Depends(get_available_memory_service)
+):
     """
     Search through user's memories
     """
     await validate_memory_search_request(user_id, request)
     
-    memories = memory_service.search_memories(
+    memories = memory_svc.search_memories(
         query=request.query,
         user_id=user_id,
         limit=request.limit
@@ -127,11 +131,14 @@ async def get_user_memory_summary(user_id: str):
     return {"user_id": user_id, "summary": summary}
 
 @router.delete("/{user_id}/memories")
-async def delete_user_memories(user_id: str):
+async def delete_user_memories(
+    user_id: str,
+    memory_svc = Depends(get_available_memory_service)
+):
     """
     Delete all memories for the user
     """
-    success = memory_service.delete_memories(user_id)
+    success = memory_svc.delete_memories(user_id)
     if success:
         return {"message": f"Memories deleted for user {user_id}"}
     else:

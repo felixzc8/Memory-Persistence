@@ -1,8 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
-from app.db.models import Base
+from app.models import Base
 import logging
+import logfire
 
 logger = logging.getLogger(__name__)
 try:
@@ -13,6 +14,7 @@ try:
         pool_pre_ping=True,
         pool_recycle=3600
     )
+    logfire.instrument_sqlalchemy(engine=engine)
     logger.info("Database engine created successfully")
 except Exception as e:
     logger.error(f"Failed to create database engine: {e}")

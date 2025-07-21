@@ -1,3 +1,5 @@
+import logging
+from logging import basicConfig
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.chat import router as chat_router
@@ -14,6 +16,7 @@ from app.middleware.exception_handler import (
 )
 from app.core.exceptions import DatabaseException, ValidationException, ChatException
 from contextlib import asynccontextmanager
+import logfire
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -22,11 +25,19 @@ async def lifespan(app: FastAPI):
     pass
 
 app = FastAPI(
-    title="TiDB + Mem0 Chatbot API",
-    description="A FastAPI backend for a persistent memory chatbot using OpenAI and Mem0 with TiDB Serverless with Session Management",
+    title="TiDB Vector Memory Chatbot API",
+    description="TiMemory",
     version="2.0.0",
     lifespan=lifespan
 )
+
+logfire.configure(token=settings.logfire_token)
+basicConfig(handlers=[logfire.LogfireLoggingHandler()], level=logging.INFO)
+logfire.instrument_fastapi(app, capture_headers=True)
+
+
+logger = logging.getLogger(__name__)
+logger.info("logger test")
 
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(
@@ -53,3 +64,14 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        app,
+        host=settings.api_host,
+        port=settings.api_port,
+        reload=settings.debug,
+        log_config=None,
+        log_level=None,
+    )

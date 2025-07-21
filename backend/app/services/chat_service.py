@@ -47,20 +47,24 @@ class ChatService:
                 
                 yield f"event: session_created\ndata: {json.dumps({'session_id': session_id, 'title': title})}\n\n"
             
-            session_context = session_service.get_session_context(session_id, limit=15)
+            session_context = session_service.get_session_context(session_id, limit=20)
+            
+            memories_context = memory_service.get_memory_context(
+                query=message, 
+                user_id=user_id, 
+                limit=5
+            )
             
             memories = memory_service.search_memories(
                 query=message, 
                 user_id=user_id, 
                 limit=5
             )
-            
-            memories_context = self._format_memory_context(memories)
-            memories_used = [mem['memory'] for mem in memories]
+            memories_used = [mem.content for mem in memories]
             
             yield f"event: memories_loaded\ndata: {json.dumps({'count': len(memories_used)})}\n\n"
             
-            system_prompt = self._create_system_prompt(memories_context)
+            system_prompt = self.create_system_prompt(memories_context)
             
             messages = [{"role": "system", "content": system_prompt}]
             messages.extend(session_context)
@@ -129,16 +133,20 @@ class ChatService:
             
             session_context = session_service.get_session_context(session_id, limit=15)
             
-            memories = memory_service.search_memories(
+            memories_context = memory_service.get_memory_context(
                 query=message, 
                 user_id=user_id, 
                 limit=5
             )
             
-            memories_context = self._format_memory_context(memories)
-            memories_used = [mem['memory'] for mem in memories]
+            memories = memory_service.search_memories(
+                query=message, 
+                user_id=user_id, 
+                limit=5
+            )
+            memories_used = [mem.content for mem in memories]
             
-            system_prompt = self._create_system_prompt(memories_context)
+            system_prompt = self.create_system_prompt(memories_context)
             
             messages = [{"role": "system", "content": system_prompt}]
             messages.extend(session_context)
@@ -173,34 +181,6 @@ class ChatService:
             logger.error(f"Error in chat_with_memory for user {user_id}: {e}")
             raise
     
-    def _format_memory_context(self, memories: List[Dict]) -> str:
-        """Format memories into a context string"""
-        if not memories:
-            return "No relevant memories found."
-        
-        memories_str = "\n".join(f"- {entry['memory']}" for entry in memories)
-        return f"User memories:\n{memories_str}"
-    
-    def _create_system_prompt(self, memories_context: str) -> str:
-        """Create system prompt with memory context"""
-        return f"""You are a helpful and friendly assistant with persistent memory and conversation history.
-
-You have access to both:
-1. Recent conversation history in this session
-2. Long-term memories from past conversations
-
-Answer the user's question based on the conversation context and their memories.
-Be conversational, helpful, and remember to use the provided memories when relevant.
-
-{memories_context}
-
-Guidelines:
-- Be natural and conversational
-- Use the conversation history to maintain context within this session
-- Use long-term memories when they're relevant to the current conversation
-- If no memories are relevant, respond normally based on the conversation
-- Keep responses concise but informative
-- Maintain a friendly and helpful tone"""
 
     async def get_conversation_summary(self, user_id: str, limit: int = 10) -> str:
         """Get a summary of recent conversations for a user"""
@@ -230,8 +210,7 @@ Guidelines:
             response = self.client.chat.completions.create(
                 model=settings.model_choice,
                 messages=messages,
-                temperature=0.3,
-                max_tokens=500
+                temperature=0.3
             )
             
             return response.choices[0].message.content
@@ -239,5 +218,26 @@ Guidelines:
         except Exception as e:
             logger.error(f"Error getting conversation summary for user {user_id}: {e}")
             return "Unable to generate conversation summary."
+        
+    def create_system_prompt(self, memories_context: str) -> str:
+        """Create system prompt with memory context"""
+        return f"""You are a helpful and friendly assistant with persistent memory and conversation history.
+
+        You have access to both:
+        1. Recent conversation history in this session
+        2. Long-term memories from past conversations
+
+        Answer the user's question based on the conversation context and their memories.
+        Be conversational, helpful, and remember to use the provided memories when relevant.
+
+        {memories_context}
+
+        Guidelines:
+        - Be natural and conversational
+        - Use the conversation history to maintain context within this session
+        - Use long-term memories when they're relevant to the current conversation
+        - If no memories are relevant, respond normally based on the conversation
+        - Keep responses concise but informative"""
+
 
 chat_service = ChatService() 

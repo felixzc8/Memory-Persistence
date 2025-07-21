@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
-from app.db.models import User, Base
+from app.models import User, Base
 from app.schemas.user import UserCreate, UserResponse
 from app.core.config import settings
 from app.core.exceptions import DatabaseException
@@ -94,8 +94,7 @@ class UserService:
                 new_user = User(
                     user_id=user_data.user_id,
                     created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc),
-                    is_active=True
+                    updated_at=datetime.now(timezone.utc)
                 )
                 
                 db.add(new_user)

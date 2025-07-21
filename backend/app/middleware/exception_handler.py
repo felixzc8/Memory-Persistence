@@ -12,7 +12,6 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-
 async def database_exception_handler(request: Request, exc: DatabaseException) -> JSONResponse:
     """Handle database-related exceptions."""
     request_id = getattr(request.state, 'request_id', str(uuid.uuid4()))
