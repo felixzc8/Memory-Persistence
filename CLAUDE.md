@@ -2,133 +2,67 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
-
-TiMemory is a full-stack AI chatbot application with persistent memory capabilities. The system uses TiDB Vector database for semantic memory storage and maintains conversation context across sessions through a custom memory management system called TiMem.
-
-## Architecture
-
-### Backend (FastAPI + Python)
-- **Main App**: `backend/app/main.py` - FastAPI application with middleware, routing, and lifecycle management
-- **Core Memory System**: `backend/memory/timemory.py` - Custom TiMem class for memory extraction and consolidation
-- **Database Layer**: `backend/app/db/database.py` - SQLAlchemy models and TiDB connection management
-- **API Routes**: `backend/app/api/` - Chat endpoints (`chat.py`) and admin endpoints (`admin.py`)
-- **Services**: `backend/app/services/` - Business logic for chat, memory, session, and user management
-- **Configuration**: `backend/app/core/config.py` - Settings management using Pydantic with environment variables
-
-### Frontend (React + Vite)
-- **Main App**: `frontend/src/App.jsx` - React app with terminal-style chat interface
-- **Components**: `frontend/src/components/` - Chat and Login components
-- **Routing**: `frontend/src/router/AppRouter.jsx` - Client-side routing
-- **Build Tool**: Vite with API proxy to backend on port 8000
-
-### Memory Management Architecture
-- **TiMem**: Custom memory management system using OpenAI for fact extraction and consolidation
-- **TiDB Vector**: Vector database integration for semantic search and storage
-- **Memory Flow**: Messages → Fact Extraction → Memory Consolidation → Vector Storage → Retrieval
-
 ## Development Commands
 
-### Backend Setup and Running
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-uv sync  # Install dependencies (preferred)
-# OR: pip install -r requirements.txt
+### Backend (FastAPI + Python)
+- `cd backend && python app/main.py` - Run the backend server directly
+- `cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload` - Run with uvicorn in reload mode
+- `cd backend && uv install` - Install dependencies using uv package manager
+- `cd backend && pip install -r requirements.txt` - Install dependencies using pip
 
-# Run development server
-python app/main.py
-# OR: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
+### Frontend (React + Vite)  
+- `cd frontend && npm run dev` - Start development server
+- `cd frontend && npm run build` - Build for production
+- `cd frontend && npm run preview` - Preview production build
 
-### Frontend Setup and Running
-```bash
-cd frontend
-npm install
-npm run dev    # Starts on http://localhost:5173
-npm run build  # Production build
-npm run preview  # Preview production build
-```
+### Project Setup
+- Backend uses `.env` file for configuration (see `.env.example` for template)
+- TiDB database connection required with SSL configuration
+- OpenAI API key required for LLM and embedding services
+- Logfire token optional for observability
 
-## Environment Configuration
+## Architecture Overview
 
-### Required Environment Variables (.env in backend/)
-```env
-# OpenAI Configuration
-OPENAI_API_KEY=your_openai_api_key
-MODEL_CHOICE=gpt-4o-mini
-EMBEDDING_MODEL=text-embedding-3-small
+### TiMemory Core System
+The project implements TiMemory, a persistent memory chatbot using TiDB vector database:
 
-# TiDB Configuration  
-TIDB_HOST=your_tidb_host
-TIDB_PORT=4000
-TIDB_USER=your_tidb_user
-TIDB_PASSWORD=your_tidb_password
-TIDB_DB_NAME=your_database_name
+- **Memory Processing Pipeline**: `backend/memory/timemory.py` - Core memory extraction, consolidation, and storage
+- **Vector Storage**: `backend/memory/tidb_vector.py` - TiDB vector database operations  
+- **LLM Integration**: `backend/memory/llms/openai.py` - OpenAI chat completion wrapper
+- **Embeddings**: `backend/memory/embedding/openai.py` - Text embedding generation
 
-# Optional
-LOGFIRE_TOKEN=your_logfire_token
-```
+### FastAPI Backend Structure
+- **Main App**: `backend/app/main.py` - FastAPI application with middleware and routing
+- **Routers**: `backend/app/routers/` - API endpoints for chat and admin functions
+- **Services**: `backend/app/services/` - Business logic layer (chat, memory, user, session services)  
+- **Models**: `backend/app/models/` - SQLAlchemy database models
+- **Schemas**: `backend/app/schemas/` - Pydantic data validation models
+- **Dependencies**: `backend/app/dependencies/` - FastAPI dependency injection (auth, validation, session)
+- **Middleware**: `backend/app/middleware/` - Request ID tracking and exception handling
 
-## Key Technical Details
+### Key Technologies
+- **Database**: TiDB with vector search capabilities via PyTiDB
+- **Backend**: FastAPI with SQLAlchemy ORM
+- **Frontend**: React with Vite
+- **Memory System**: Custom TiMemory implementation using OpenAI embeddings
+- **Observability**: Logfire integration for logging and monitoring
 
-### Memory System
-- Uses custom TiMem class for memory management
-- Fact extraction from conversations using structured prompts
-- Memory consolidation to resolve conflicts and duplicates
-- Vector embeddings stored in TiDB Vector database
-- Memory isolation per user_id for privacy
+### Memory System Flow
+1. **Message Processing**: Extract facts from user-AI conversations using LLM
+2. **Similarity Search**: Find related existing memories using vector search
+3. **Memory Consolidation**: Merge new and existing memories to avoid duplication  
+4. **Storage**: Store consolidated memories with embeddings in TiDB
 
-### API Architecture
-- RESTful API design with `/api/v1/chat` prefix
-- Streaming responses using Server-Sent Events (SSE)
-- Session-based conversation management
-- Comprehensive error handling with custom exception types
-- CORS enabled for development
+### Authentication & Security
+- JWT-based authentication with user isolation
+- All chat and memory endpoints require authentication
+- Admin endpoints for user/session management
+- Password hashing with bcrypt
 
-### Database Schema
-- SQLAlchemy models in `backend/app/models/`
-- User, Session, Message, and Memory models
-- TiDB Serverless with SSL connection
-- Vector table: `memories` (configurable via settings)
+## Configuration Requirements
+- TiDB connection string with SSL certificates
+- OpenAI API key for chat and embeddings
+- JWT secret for authentication
+- Optional Logfire token for observability
 
-### Frontend Features
-- Terminal-style UI with MacOS aesthetic
-- Real-time streaming responses via EventSource API
-- Username-based authentication with localStorage persistence
-- Session management and conversation history
-
-## Development Patterns
-
-### Error Handling
-- Custom exception classes in `app/core/exceptions/`
-- Global exception handlers in `app/middleware/exception_handler.py`
-- Request ID middleware for tracking
-
-### Logging
-- Logfire integration for structured logging
-- SQLAlchemy query logging available
-- FastAPI request/response logging
-
-### Service Layer Pattern
-- Business logic separated into service classes
-- Dependency injection via FastAPI dependencies
-- Clean separation of concerns: API → Service → Database/External
-
-### Memory Prompts
-- Structured prompts in `backend/memory/prompts.py`
-- Pydantic models for memory schemas in `backend/memory/schemas/`
-- OpenAI function calling for structured responses
-
-## API Access
-- Backend: http://localhost:8000
-- Frontend: http://localhost:5173
-- API Docs: http://localhost:8000/docs
-- Health Check: http://localhost:8000/health
-
-## Package Management
-- Backend: Uses `uv` for fast dependency management (preferred) or pip with requirements.txt
-- Frontend: npm with package.json
-- Python: >= 3.9 required for backend
-- Node.js: >= 16 required for frontend
+The system is designed for production deployment with Docker support and comprehensive error handling.
