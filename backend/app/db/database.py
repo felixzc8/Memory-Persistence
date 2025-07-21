@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 from app.models import Base
@@ -10,11 +10,9 @@ try:
     logger.info(f"Connecting to database: {settings.tidb_host}:{settings.tidb_port}")
     engine = create_engine(
         settings.tidb_connection_string,
-        echo=settings.debug,
         pool_pre_ping=True,
         pool_recycle=3600
     )
-    logfire.instrument_sqlalchemy(engine=engine)
     logger.info("Database engine created successfully")
 except Exception as e:
     logger.error(f"Failed to create database engine: {e}")
@@ -23,11 +21,19 @@ except Exception as e:
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def create_tables():
-    """Create database tables"""
+    """Create database tables if they don't exist"""
     try:
-        logger.info("Creating database tables...")
-        Base.metadata.create_all(bind=engine)
-        logger.info("Database tables created successfully")
+        inspector = inspect(engine)
+        existing_tables = set(inspector.get_table_names())
+        required_tables = set(Base.metadata.tables.keys())
+        missing_tables = required_tables - existing_tables
+        
+        if missing_tables:
+            logger.info(f"Creating missing database tables: {', '.join(missing_tables)}")
+            Base.metadata.create_all(bind=engine)
+            logger.info("Database tables created successfully")
+        else:
+            logger.debug("All database tables already exist")
     except Exception as e:
         logger.error(f"Error creating database tables: {e}")
         logger.error(f"Connection string host: {settings.tidb_host}:{settings.tidb_port}")

@@ -205,4 +205,4 @@ async def continue_chat_session_stream(user_id: str, session_id: str, request: C
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Headers": "Cache-Control"
         }
-    ) 
+    )

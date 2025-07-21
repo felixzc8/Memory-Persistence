@@ -4,6 +4,7 @@ from app.core.config import settings
 from app.services.memory_service import memory_service
 from app.services.session_service import session_service
 from app.schemas.chat import ChatMessage, ChatResponse
+from memory.prompts import create_chat_system_prompt
 import logging
 from datetime import datetime
 import json
@@ -64,7 +65,7 @@ class ChatService:
             
             yield f"event: memories_loaded\ndata: {json.dumps({'count': len(memories_used)})}\n\n"
             
-            system_prompt = self.create_system_prompt(memories_context)
+            system_prompt = create_chat_system_prompt(memories_context)
             
             messages = [{"role": "system", "content": system_prompt}]
             messages.extend(session_context)
@@ -146,7 +147,7 @@ class ChatService:
             )
             memories_used = [mem.content for mem in memories]
             
-            system_prompt = self.create_system_prompt(memories_context)
+            system_prompt = create_chat_system_prompt(memories_context)
             
             messages = [{"role": "system", "content": system_prompt}]
             messages.extend(session_context)
@@ -219,25 +220,6 @@ class ChatService:
             logger.error(f"Error getting conversation summary for user {user_id}: {e}")
             return "Unable to generate conversation summary."
         
-    def create_system_prompt(self, memories_context: str) -> str:
-        """Create system prompt with memory context"""
-        return f"""You are a helpful and friendly assistant with persistent memory and conversation history.
-
-        You have access to both:
-        1. Recent conversation history in this session
-        2. Long-term memories from past conversations
-
-        Answer the user's question based on the conversation context and their memories.
-        Be conversational, helpful, and remember to use the provided memories when relevant.
-
-        {memories_context}
-
-        Guidelines:
-        - Be natural and conversational
-        - Use the conversation history to maintain context within this session
-        - Use long-term memories when they're relevant to the current conversation
-        - If no memories are relevant, respond normally based on the conversation
-        - Keep responses concise but informative"""
 
 
 chat_service = ChatService() 

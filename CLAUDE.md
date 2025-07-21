@@ -2,211 +2,133 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Overview
+
+TiMemory is a full-stack AI chatbot application with persistent memory capabilities. The system uses TiDB Vector database for semantic memory storage and maintains conversation context across sessions through a custom memory management system called TiMem.
+
+## Architecture
+
+### Backend (FastAPI + Python)
+- **Main App**: `backend/app/main.py` - FastAPI application with middleware, routing, and lifecycle management
+- **Core Memory System**: `backend/memory/timemory.py` - Custom TiMem class for memory extraction and consolidation
+- **Database Layer**: `backend/app/db/database.py` - SQLAlchemy models and TiDB connection management
+- **API Routes**: `backend/app/api/` - Chat endpoints (`chat.py`) and admin endpoints (`admin.py`)
+- **Services**: `backend/app/services/` - Business logic for chat, memory, session, and user management
+- **Configuration**: `backend/app/core/config.py` - Settings management using Pydantic with environment variables
+
+### Frontend (React + Vite)
+- **Main App**: `frontend/src/App.jsx` - React app with terminal-style chat interface
+- **Components**: `frontend/src/components/` - Chat and Login components
+- **Routing**: `frontend/src/router/AppRouter.jsx` - Client-side routing
+- **Build Tool**: Vite with API proxy to backend on port 8000
+
+### Memory Management Architecture
+- **TiMem**: Custom memory management system using OpenAI for fact extraction and consolidation
+- **TiDB Vector**: Vector database integration for semantic search and storage
+- **Memory Flow**: Messages → Fact Extraction → Memory Consolidation → Vector Storage → Retrieval
+
 ## Development Commands
 
-### Backend Setup
+### Backend Setup and Running
 ```bash
 cd backend
-uv sync
-cp .env.example .env  # Then edit with your values
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+uv sync  # Install dependencies (preferred)
+# OR: pip install -r requirements.txt
+
+# Run development server
+python app/main.py
+# OR: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Frontend Setup
+### Frontend Setup and Running
 ```bash
 cd frontend
 npm install
+npm run dev    # Starts on http://localhost:5173
+npm run build  # Production build
+npm run preview  # Preview production build
 ```
 
-### Running the Application
-```bash
-# Terminal 1: Start backend (from backend directory)
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-# Alternative: uv run python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-# Alternative: uv run python -m app.main
+## Environment Configuration
 
-# Terminal 2: Start frontend (from frontend directory)
-npm run dev
-```
-
-### Frontend Development Commands
-```bash
-# Development server (from frontend directory)
-npm run dev          # Starts Vite dev server on http://localhost:5173
-
-# Production build
-npm run build        # Builds for production
-npm run preview      # Preview production build locally
-```
-
-### Testing Endpoints
-```bash
-# Health check
-curl http://localhost:8000/health
-
-# Chat endpoint (requires proper TiDB/OpenAI configuration)
-curl -X POST "http://localhost:8000/api/v1/chat" \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Hello", "user_id": "test_user"}'
-```
-
-## Architecture Overview
-
-This is a **full-stack application** with a FastAPI backend and React frontend for an AI chatbot with persistent memory capabilities.
-
-### Core Technologies
-**Backend:**
-- **FastAPI** + **Uvicorn**: Web framework and ASGI server
-- **OpenAI** (GPT-4o-mini default): Language model integration
-- **Mem0**: Persistent memory management framework
-- **TiDB Serverless**: Primary database (MySQL-compatible)
-- **TiDB Vector**: Vector database for memory storage via LangChain
-- **LangChain**: Vector store abstraction layer
-
-**Frontend:**
-- **React** 18: UI library
-- **Vite**: Build tool and development server
-- **CSS**: Terminal-styled interface (MacOS Terminal aesthetic)
-- **LocalStorage**: Username persistence
-
-### Directory Structure
-```
-├── backend/
-│   ├── app/
-│   │   ├── main.py              # FastAPI app initialization and routes
-│   │   ├── config.py            # Settings management with Pydantic
-│   │   ├── api/chat.py          # Chat endpoints (/api/v1/chat, /api/v1/memories/*)
-│   │   ├── services/
-│   │   │   ├── chat_service.py  # OpenAI integration
-│   │   │   └── memory_service.py # Mem0 memory operations
-│   │   └── schemas/chat.py      # Pydantic models for request/response
-│   ├── requirements.txt
-│   └── run.py
-└── frontend/
-    ├── src/
-    │   ├── App.jsx              # Main React component with chat interface
-    │   ├── App.css              # Terminal styling
-    │   └── main.jsx             # React entry point
-    ├── index.html               # Vite HTML template
-    ├── vite.config.js           # Vite configuration with API proxy
-    └── package.json
-```
-
-### Application Flow
-1. **Frontend**: Terminal-style React interface on `http://localhost:5173`
-2. **Backend**: FastAPI server on `http://localhost:8000`
-3. **Proxy**: Vite proxies `/api/*` requests to backend
-4. **Authentication**: Simple username-based (no passwords)
-5. **Memory**: Per-user conversation history stored in TiDB Vector
-
-## Key Implementation Details
-
-### Frontend Architecture
-- **Single-page app** with username login screen and chat interface
-- **Terminal aesthetic**: MacOS Terminal styling with monospace fonts
-- **State management**: React hooks for messages, user state, and loading
-- **LocalStorage persistence**: Username saved across browser sessions
-- **Real-time focus management**: Input field stays focused during conversations
-- **Auto-scroll**: Messages automatically scroll to bottom
-
-### Backend Architecture
-- **Clean Architecture**: API → Service → External integrations
-- **Memory isolation**: Each user_id gets separate memory context
-- **Error handling**: Comprehensive error responses for frontend
-- **CORS enabled**: For frontend development
-
-### Memory Management
-- Uses Mem0 with automatic user isolation via user_id
-- Memories stored in TiDB Vector database via LangChain integration
-- Each conversation maintains context through memory retrieval
-
-### Database Configuration
-- TiDB Serverless with SSL connection for regular database operations
-- TiDB Vector for memory storage with cosine similarity (default)
-- PyMySQL connector with SSL certificate validation
-- Connection parameters: host, port, user, password, database name
-- Vector table name: `memory_vectors` (configurable)
-
-### API Endpoints
-**Chat Endpoints:**
-- `POST /api/v1/chat/{user_id}/new` - Create new session and send first message
-- `POST /api/v1/chat/{user_id}/{session_id}` - Continue conversation in existing session
-- `POST /api/v1/chat/{user_id}/new/stream` - Streaming version of new session endpoint (SSE)
-- `POST /api/v1/chat/{user_id}/{session_id}/stream` - Streaming version for existing sessions (SSE)
-
-**Session Management:**
-- `GET /api/v1/chat/{user_id}/sessions` - Get list of user's sessions
-- `GET /api/v1/chat/{user_id}/sessions/{session_id}` - Get specific session
-- `PUT /api/v1/chat/{user_id}/sessions/{session_id}` - Update session metadata
-- `DELETE /api/v1/chat/{user_id}/sessions/{session_id}` - Delete session
-
-**Memory Management:**
-- `POST /api/v1/chat/{user_id}/memories/search` - Search user memories  
-- `GET /api/v1/chat/{user_id}/memories/summary` - Conversation summary
-- `DELETE /api/v1/chat/{user_id}/memories` - Delete user memories
-
-**Health Checks:**
-- `GET /health` and `GET /api/v1/chat/health` - Health checks
-
-### Environment Variables Required
+### Required Environment Variables (.env in backend/)
 ```env
-OPENAI_API_KEY=         # OpenAI API key
-MODEL_CHOICE=           # OpenAI model (e.g., gpt-4o-mini)
-TIDB_HOST=              # TiDB host
-TIDB_PORT=4000          # TiDB port
-TIDB_USER=              # TiDB username
-TIDB_PASSWORD=          # TiDB password
-TIDB_DB_NAME=           # TiDB database name
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key
+MODEL_CHOICE=gpt-4o-mini
+EMBEDDING_MODEL=text-embedding-3-small
+
+# TiDB Configuration  
+TIDB_HOST=your_tidb_host
+TIDB_PORT=4000
+TIDB_USER=your_tidb_user
+TIDB_PASSWORD=your_tidb_password
+TIDB_DB_NAME=your_database_name
+
+# Optional
+LOGFIRE_TOKEN=your_logfire_token
 ```
 
-## Frontend State Management
+## Key Technical Details
 
-### Key React State
-- `username`: Current user's display name
-- `userId`: Used for backend API calls (same as username)
-- `showChat`: Controls login screen vs chat interface transition
-- `messages`: Array of chat messages with timestamps
-- `isLoading`: Prevents duplicate requests and shows loading state
+### Memory System
+- Uses custom TiMem class for memory management
+- Fact extraction from conversations using structured prompts
+- Memory consolidation to resolve conflicts and duplicates
+- Vector embeddings stored in TiDB Vector database
+- Memory isolation per user_id for privacy
 
-### LocalStorage Integration
-- Username automatically saved on first login
-- Users bypass login screen on subsequent visits
-- Signout button clears localStorage and returns to login
+### API Architecture
+- RESTful API design with `/api/v1/chat` prefix
+- Streaming responses using Server-Sent Events (SSE)
+- Session-based conversation management
+- Comprehensive error handling with custom exception types
+- CORS enabled for development
 
-### Focus Management
-- Input field automatically focused when loading state changes
-- Users can type continuously without clicking back into input
-- useEffect-based approach for clean focus management
+### Database Schema
+- SQLAlchemy models in `backend/app/models/`
+- User, Session, Message, and Memory models
+- TiDB Serverless with SSL connection
+- Vector table: `memories` (configurable via settings)
 
-### Streaming Implementation
-**Server-Sent Events (SSE):**
-- Real-time streaming responses using FastAPI StreamingResponse
-- EventSource API integration on frontend for SSE consumption
-- Graceful fallback to regular API calls if streaming fails
-- Character-by-character response rendering with typing indicators
-
-**SSE Event Types:**
-- `session_created` - New session information
-- `memories_loaded` - Memory context loaded
-- `content` - Streaming response chunks
-- `complete` - Response finished with metadata
-- `error` - Error information
-
-## Current Status
-- Full-stack application with React frontend and FastAPI backend
+### Frontend Features
 - Terminal-style UI with MacOS aesthetic
+- Real-time streaming responses via EventSource API
 - Username-based authentication with localStorage persistence
-- Real-time chat with persistent memory via TiDB Vector
-- Streaming chat responses with Server-Sent Events (SSE)
-- Real-time character-by-character response rendering
-- Session management with create, list, update, and delete operations
-- Memory search and summary functionality
-- Health check endpoints for monitoring
-- No test suite or CI/CD pipeline currently implemented
+- Session management and conversation history
 
-## Development Best Practices
-- Always check existing patterns before adding new features
-- Use the service layer for business logic, keeping controllers thin
-- Follow the existing error handling patterns for consistency
-- Maintain the terminal aesthetic in frontend changes
-- Test endpoints manually using curl or the /docs interface
-- Ensure proper user isolation in memory operations
+## Development Patterns
+
+### Error Handling
+- Custom exception classes in `app/core/exceptions/`
+- Global exception handlers in `app/middleware/exception_handler.py`
+- Request ID middleware for tracking
+
+### Logging
+- Logfire integration for structured logging
+- SQLAlchemy query logging available
+- FastAPI request/response logging
+
+### Service Layer Pattern
+- Business logic separated into service classes
+- Dependency injection via FastAPI dependencies
+- Clean separation of concerns: API → Service → Database/External
+
+### Memory Prompts
+- Structured prompts in `backend/memory/prompts.py`
+- Pydantic models for memory schemas in `backend/memory/schemas/`
+- OpenAI function calling for structured responses
+
+## API Access
+- Backend: http://localhost:8000
+- Frontend: http://localhost:5173
+- API Docs: http://localhost:8000/docs
+- Health Check: http://localhost:8000/health
+
+## Package Management
+- Backend: Uses `uv` for fast dependency management (preferred) or pip with requirements.txt
+- Frontend: npm with package.json
+- Python: >= 3.9 required for backend
+- Node.js: >= 16 required for frontend
