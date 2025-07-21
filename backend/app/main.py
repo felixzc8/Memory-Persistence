@@ -2,8 +2,8 @@ import logging
 from logging import basicConfig
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.chat import router as chat_router
-from app.api.admin import router as admin_router
+from app.routers.chat import router as chat_router
+from app.routers.admin import router as admin_router
 from app.core.config import settings
 from app.db.database import create_tables
 from app.middleware.request_id import RequestIDMiddleware
@@ -37,7 +37,6 @@ logfire.instrument_fastapi(app, capture_headers=True)
 
 
 logger = logging.getLogger(__name__)
-logger.info("logger test")
 
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(

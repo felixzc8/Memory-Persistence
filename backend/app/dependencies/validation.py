@@ -2,7 +2,8 @@
 Input validators for FastAPI endpoints.
 """
 
-from app.schemas.chat import ChatRequest, MemorySearchRequest
+from app.schemas.chat import ChatRequest
+from app.schemas.memory import MemorySearchRequest
 from app.core.exceptions import ValidationException
 import logging
 

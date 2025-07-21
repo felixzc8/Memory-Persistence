@@ -1,11 +1,12 @@
 from app.core.config import settings
 from app.models.memory import Memory
 from app.db.database import SessionLocal, create_tables
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 from sqlalchemy import func
 from typing import List, Dict, Optional
 from uuid import uuid4
 import logging
+from app.schemas.memory import MemoryResponse, Memory as MemorySchema
 
 logger = logging.getLogger(__name__)
 
@@ -21,17 +22,18 @@ class TiDBVector:
         """
         pass
     
-    def insert(self, vector: List[float], user_id: str, content: str, metadata: Optional[Dict] = None):
+    def insert(self, vector: List[float], user_id: str, content: str, memory_attributes: Optional[Dict] = None, id: Optional[str] = None):
         """
         Insert a new memory into the table
         """
-        id = str(uuid4())
+        if id is None:
+            id = str(uuid4())
         memory = Memory(
             id=id,
             vector=vector,
             user_id=user_id,
             content=content,
-            memory_attributes=metadata or {}
+            memory_attributes=memory_attributes or {}
         )
         
         with SessionLocal() as db:
@@ -46,19 +48,21 @@ class TiDBVector:
                 raise
         return id
     
-    def search(self, query_vector: List[float], user_id: str, limit: int) -> List[Memory]:
+    def search(self, query_vector: List[float], user_id: str, limit: int) -> MemoryResponse:
         """
         Search for memories similar to the query vector using cosine similarity
         """
         with SessionLocal() as db:
-            results = db.query(Memory).filter(
+            results = db.query(Memory).options(defer(Memory.vector)).filter(
                 Memory.user_id == user_id
             ).order_by(
                 Memory.vector.cosine_distance(query_vector)
             ).limit(limit).all()
             
-            logger.info(f"Found {len(results)} memories for user: {user_id}")
-            return results
+            memory_schemas = [MemorySchema.model_validate(result, from_attributes=True) for result in results]
+            
+            logger.info(f"Found {len(results)} memories for user: {user_id}: {memory_schemas}")
+            return MemoryResponse(memories=memory_schemas)
         
     def delete(self, id: str):
         """
@@ -73,7 +77,7 @@ class TiDBVector:
             else:
                 logger.warning(f"Memory with ID: {id} not found")
 
-    def update(self, id: str, vector: Optional[List[float]] = None, content: Optional[str] = None, metadata: Optional[Dict] = None):
+    def update(self, id: str, vector: Optional[List[float]] = None, content: Optional[str] = None, memory_attributes: Optional[Dict] = None):
         """
         Update a memory by its ID
         """
@@ -84,10 +88,9 @@ class TiDBVector:
                     memory.vector = vector
                 if content is not None:
                     memory.content = content
-                if metadata is not None:
-                    memory.memory_attributes = metadata
+                if memory_attributes is not None:
+                    memory.memory_attributes = memory_attributes
                 
-                memory.updated_at = func.now()
                 db.commit()
                 logger.info(f"Updated memory with ID: {id}")
             else:
