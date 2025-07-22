@@ -38,7 +38,6 @@ function Login({ username, setUsername, onLogin, usernameInputRef }) {
             onKeyPress={handleUsernameKeyPress}
             placeholder="Enter username..."
           />
-          <span className="cursor">|</span>
         </div>
       </div>
     </div>
