@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { marked } from 'marked';
 import '../styles/chat.css';
 
 function Chat({ username, userId, onSignout }) {
@@ -24,6 +25,19 @@ function Chat({ username, userId, onSignout }) {
       minute: '2-digit',
       second: '2-digit'
     });
+  };
+
+  const formatMessageContent = (content) => {
+    // Configure marked options
+    marked.setOptions({
+      breaks: true, // Enable line breaks
+      gfm: true, // Enable GitHub Flavored Markdown
+    });
+    
+    // Convert markdown to HTML
+    const html = marked(content);
+    
+    return { __html: html };
   };
 
   useEffect(() => {
@@ -420,7 +434,10 @@ function Chat({ username, userId, onSignout }) {
               {message.type === 'system' && (
                 <span style={{ color: '#888888' }}> system: </span>
               )}
-              <span>{message.content}{message.isStreaming && <span className="cursor"></span>}</span>
+              <span 
+                dangerouslySetInnerHTML={formatMessageContent(message.content)}
+              />
+              {message.isStreaming && <span className="cursor"></span>}
             </div>
           ))}
           {isLoading && !isStreaming && (
