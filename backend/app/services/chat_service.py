@@ -4,7 +4,7 @@ from app.core.config import settings
 from app.services.memory_service import memory_service
 from app.services.session_service import session_service
 from app.schemas.chat import ChatMessage, ChatResponse
-from memory.prompts import create_chat_system_prompt
+from TiMemory.prompts import create_chat_system_prompt
 import logging
 from datetime import datetime
 import json

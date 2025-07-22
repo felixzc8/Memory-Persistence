@@ -1,0 +1,30 @@
+from abc import ABC, abstractmethod
+from typing import Optional
+
+class MemoryConfig(ABC):
+    """Abstract configuration interface for memory system"""
+    
+    @property
+    @abstractmethod
+    def openai_api_key(self) -> str:
+        pass
+    
+    @property
+    @abstractmethod
+    def model_choice(self) -> str:
+        pass
+    
+    @property
+    @abstractmethod
+    def embedding_model(self) -> str:
+        pass
+    
+    @property
+    @abstractmethod
+    def embedding_model_dims(self) -> int:
+        pass
+    
+    @property
+    @abstractmethod
+    def memory_search_limit(self) -> Optional[int]:
+        pass

@@ -183,15 +183,16 @@ function Chat({ username, userId, onSignout }) {
 
       let apiUrl;
       if (currentSessionId) {
-        apiUrl = `/api/v1/chat/${userId}/${currentSessionId}/stream`;
+        apiUrl = `/api/v1/chat/${userId}/${currentSessionId}`;
       } else {
-        apiUrl = `/api/v1/chat/${userId}/new/stream`;
+        apiUrl = `/api/v1/chat/${userId}/new`;
       }
 
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
         },
         body: JSON.stringify(requestBody)
       });
@@ -328,6 +329,7 @@ function Chat({ username, userId, onSignout }) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
           },
           body: JSON.stringify(requestBody)
         });

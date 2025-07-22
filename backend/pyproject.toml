@@ -17,6 +17,7 @@ dependencies = [
     "logfire",
     "logfire[sqlalchemy]",
     "logfire[fastapi]",
+    "timemory",
 ]
 
 [build-system]
@@ -28,3 +29,6 @@ packages = ["app"]
 
 [tool.uv]
 dev-dependencies = []
+
+[tool.uv.sources]
+timemory = { path = "../TiMemory", editable = true }

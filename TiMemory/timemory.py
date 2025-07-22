@@ -3,20 +3,26 @@ from .llms.openai import OpenAILLM
 from .embedding.openai import OpenAIEmbeddingModel
 from .tidb_vector import TiDBVector
 from typing import List, Dict
-from app.schemas.memory import MemoryResponse, Memory
+from .schemas.memory import MemoryResponse, Memory
+from .config.base import MemoryConfig
 
 from uuid import uuid4
 import logging
 import json
 
-class TiMem:
-    def __init__(self):
+class TiMemory:
+    def __init__(self, config: MemoryConfig, db_session_factory=None, memory_model=None, create_tables_func=None):
         self.fact_extraction_prompt = FACT_EXTRACTION_PROMPT
         self.memory_consolidation_prompt = MEMORY_CONSOLIDATION_PROMPT
 
-        self.embedder = OpenAIEmbeddingModel()
-        self.llm = OpenAILLM()
-        self.tidbvector = TiDBVector()
+        self.embedder = OpenAIEmbeddingModel(config)
+        self.llm = OpenAILLM(config)
+        
+        self.tidbvector = TiDBVector(
+            db_session_factory=db_session_factory,
+            memory_model=memory_model,
+            create_tables_func=create_tables_func
+        )
         self.tidbvector.create_table()
         self.logger = logging.getLogger(__name__)
         
