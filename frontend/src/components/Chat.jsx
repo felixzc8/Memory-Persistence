@@ -412,7 +412,7 @@ function Chat({ username, userId, onSignout }) {
                 [{formatTimestamp(message.timestamp)}]
               </span>
               {message.type === 'user' && (
-                <span style={{ color: '#00ff00' }}> {username}$: </span>
+                <span style={{ color: '#DC150B' }}> {username}$: </span>
               )}
               {message.type === 'assistant' && (
                 <span style={{ color: '#cccccc' }}> assistant: </span>
