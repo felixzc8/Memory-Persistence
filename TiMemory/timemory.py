@@ -118,10 +118,9 @@ class TiMemory:
         """
         Resolve new memories against existing ones using the fact update memory prompt.
         """
-        input_data = {
-            "existing_memories": [memory.model_dump() for memory in existing_memories.memories],
-            "new_memories": [memory.model_dump() for memory in new_memories]
-        }
+        existing_memories_str = "\n".join([f"EXISTING: {memory.model_dump()}" for memory in existing_memories.memories])
+        new_memories_str = "\n".join([f"NEW: {memory.model_dump()}" for memory in new_memories])
+        input_data = f"{existing_memories_str}\n{new_memories_str}"
         
         self.logger.info(f"Consolidating memories: {input_data}")
         
