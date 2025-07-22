@@ -1,7 +1,7 @@
 from sqlalchemy import String, Text, DateTime, JSON, Enum, ForeignKey
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
-from . import Base
+from .memory import Base
 
 class Message(Base):
     __tablename__ = "messages"

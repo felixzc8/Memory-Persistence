@@ -2,7 +2,7 @@
 Session guards for FastAPI endpoints.
 """
 
-from app.services.session_service import session_service
+from app.services.memory_service import memory_service
 from app.core.exceptions import DatabaseException, ValidationException
 import logging
 
@@ -24,7 +24,7 @@ async def get_user_session(session_id: str, user_id: str):
         DatabaseException: If session is not found
         ValidationException: If session doesn't belong to user
     """
-    session = session_service.get_session(session_id)
+    session = memory_service.memory.session_manager.get_session(session_id)
     if not session:
         raise DatabaseException(
             f"Session not found: {session_id}",

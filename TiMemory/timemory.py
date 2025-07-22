@@ -2,6 +2,8 @@ from .prompts import FACT_EXTRACTION_PROMPT, MEMORY_CONSOLIDATION_PROMPT
 from .llms.openai import OpenAILLM
 from .embedding.openai import OpenAIEmbeddingModel
 from .tidb_vector import TiDBVector
+from .session_manager import SessionManager
+from . import database
 from typing import List, Dict
 from .schemas.memory import MemoryResponse, Memory
 from .config.base import MemoryConfig
@@ -11,19 +13,32 @@ import logging
 import json
 
 class TiMemory:
-    def __init__(self, config: MemoryConfig, db_session_factory=None, memory_model=None, create_tables_func=None):
+    def __init__(self, config: MemoryConfig):
         self.fact_extraction_prompt = FACT_EXTRACTION_PROMPT
         self.memory_consolidation_prompt = MEMORY_CONSOLIDATION_PROMPT
+        self.config = config
 
+        # Initialize TiMemory's own database connection
+        database.initialize_database(config)
+        database.create_tables()
+        
         self.embedder = OpenAIEmbeddingModel(config)
         self.llm = OpenAILLM(config)
         
+        # Use TiMemory's own database for vector storage
+        from .models.memory import Memory as MemoryModel
         self.tidbvector = TiDBVector(
-            db_session_factory=db_session_factory,
-            memory_model=memory_model,
-            create_tables_func=create_tables_func
+            db_session_factory=database.SessionLocal,
+            memory_model=MemoryModel,
+            create_tables_func=database.create_tables
         )
         self.tidbvector.create_table()
+        
+        # Use TiMemory's own database for session management  
+        self.session_manager = SessionManager(
+            db_session_factory=database.SessionLocal
+        )
+        
         self.logger = logging.getLogger(__name__)
         
     def process_messages(self, messages: List[Dict[str, str]], user_id: str):

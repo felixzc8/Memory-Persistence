@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from app.schemas.chat import ChatRequest
-from app.schemas.memory import MemorySearchRequest, MemorySearchResponse
-from app.schemas.session import (
+from TiMemory.schemas.memory import MemorySearchRequest, MemorySearchResponse
+from TiMemory.schemas.session import (
     Session,
     SessionListResponse,
     UpdateSessionRequest
@@ -10,7 +10,7 @@ from app.schemas.session import (
 from app.services.chat_service import chat_service
 from app.services.memory_service import memory_service
 from app.dependencies.memory import get_available_memory_service
-from app.services.session_service import session_service
+# Using memory_service.memory.session_manager instead
 from app.services.user_service import user_service
 from app.dependencies.auth import get_authenticated_user
 from app.dependencies.session import get_user_session
@@ -100,7 +100,7 @@ async def get_user_sessions(user_id: str):
     """
     Get list of user's sessions
     """
-    sessions = session_service.get_user_sessions(user_id)
+    sessions = memory_service.memory.session_manager.get_user_sessions(user_id)
     return SessionListResponse(
         sessions=sessions,
         user_id=user_id,
@@ -122,7 +122,7 @@ async def update_user_session(user_id: str, session_id: str, request: UpdateSess
     """
     await get_user_session(session_id, user_id)
     
-    success = session_service.update_session(session_id, request)
+    success = memory_service.memory.session_manager.update_session(session_id, request)
     if not success:
         return {"message": "Session updated successfully"}
     return {"message": "Session updated successfully"}
@@ -134,7 +134,7 @@ async def delete_user_session(user_id: str, session_id: str):
     """
     await get_user_session(session_id, user_id)
     
-    success = session_service.delete_session(session_id)
+    success = memory_service.memory.session_manager.delete_session(session_id)
     if not success:
         return {"message": "Session deleted successfully"}
     return {"message": "Session deleted successfully"}
