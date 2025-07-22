@@ -28,3 +28,33 @@ class MemoryConfig(ABC):
     @abstractmethod
     def memory_search_limit(self) -> Optional[int]:
         pass
+    
+    @property
+    @abstractmethod
+    def tidb_host(self) -> str:
+        pass
+    
+    @property
+    @abstractmethod  
+    def tidb_port(self) -> int:
+        pass
+    
+    @property
+    @abstractmethod
+    def tidb_user(self) -> str:
+        pass
+    
+    @property
+    @abstractmethod
+    def tidb_password(self) -> str:
+        pass
+    
+    @property
+    @abstractmethod
+    def tidb_db_name(self) -> str:
+        pass
+    
+    @property
+    @abstractmethod
+    def tidb_connection_string(self) -> str:
+        pass

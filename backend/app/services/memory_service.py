@@ -1,9 +1,7 @@
 from TiMemory import TiMemory
-from TiMemory.models import Memory
 from typing import List, Dict, Any
 from app.core.config import settings
 from app.core.exceptions import ChatException
-from app.db.database import SessionLocal, create_tables
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,10 +11,7 @@ class MemoryService:
     
     def __init__(self):
         self.memory = TiMemory(
-            config=settings,
-            db_session_factory=SessionLocal,
-            memory_model=Memory,
-            create_tables_func=create_tables
+            config=settings
         )
     
     

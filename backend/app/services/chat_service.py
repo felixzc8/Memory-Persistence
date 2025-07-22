@@ -2,7 +2,7 @@ from openai import OpenAI
 from typing import List, Dict, Tuple, AsyncGenerator
 from app.core.config import settings
 from app.services.memory_service import memory_service
-from app.services.session_service import session_service
+# Using memory_service.memory.session_manager instead of direct import
 from app.schemas.chat import ChatMessage, ChatResponse
 from TiMemory.prompts import create_chat_system_prompt
 import logging
@@ -41,14 +41,14 @@ class ChatService:
         """
         try:
             if not session_id:
-                title = session_service.generate_session_title(message)
-                session_response = session_service.create_session(user_id, title)
+                title = memory_service.memory.session_manager.generate_session_title(message)
+                session_response = memory_service.memory.session_manager.create_session(user_id, title)
                 session_id = session_response.session_id
                 logger.info(f"Created new session {session_id} for user {user_id}")
                 
                 yield f"event: session_created\ndata: {json.dumps({'session_id': session_id, 'title': title})}\n\n"
             
-            session_context = session_service.get_session_context(session_id, limit=20)
+            session_context = memory_service.memory.session_manager.get_session_context(session_id, limit=20)
             
             memories_context = memory_service.get_memory_context(
                 query=message, 
@@ -71,7 +71,7 @@ class ChatService:
             messages.extend(session_context)
             messages.append({"role": "user", "content": message})
             
-            session_service.add_message_to_session(session_id, "user", message)
+            memory_service.memory.session_manager.add_message_to_session(session_id, "user", message)
             full_response = ""
             
             stream = self.client.chat.completions.create(
@@ -88,7 +88,7 @@ class ChatService:
                     full_response += content
                     yield f"event: content\ndata: {json.dumps({'content': content})}\n\n"
             
-            session_service.add_message_to_session(session_id, "assistant", full_response)
+            memory_service.memory.session_manager.add_message_to_session(session_id, "assistant", full_response)
             conversation_messages = [
                 {"role": "user", "content": message},
                 {"role": "assistant", "content": full_response}
@@ -127,12 +127,12 @@ class ChatService:
         """
         try:
             if not session_id:
-                title = session_service.generate_session_title(message)
-                session_response = session_service.create_session(user_id, title)
+                title = memory_service.memory.session_manager.generate_session_title(message)
+                session_response = memory_service.memory.session_manager.create_session(user_id, title)
                 session_id = session_response.session_id
                 logger.info(f"Created new session {session_id} for user {user_id}")
             
-            session_context = session_service.get_session_context(session_id, limit=15)
+            session_context = memory_service.memory.session_manager.get_session_context(session_id, limit=15)
             
             memories_context = memory_service.get_memory_context(
                 query=message, 
@@ -161,8 +161,8 @@ class ChatService:
             
             assistant_response = response.choices[0].message.content
             
-            session_service.add_message_to_session(session_id, "user", message)
-            session_service.add_message_to_session(session_id, "assistant", assistant_response)
+            memory_service.memory.session_manager.add_message_to_session(session_id, "user", message)
+            memory_service.memory.session_manager.add_message_to_session(session_id, "assistant", assistant_response)
             conversation_messages = [
                 {"role": "user", "content": message},
                 {"role": "assistant", "content": assistant_response}
