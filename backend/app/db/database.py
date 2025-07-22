@@ -21,7 +21,7 @@ except Exception as e:
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def create_tables():
-    """Create database tables if they don't exist"""
+    """Create backend database tables (Users only) if they don't exist"""
     try:
         inspector = inspect(engine)
         existing_tables = set(inspector.get_table_names())
@@ -29,13 +29,16 @@ def create_tables():
         missing_tables = required_tables - existing_tables
         
         if missing_tables:
-            logger.info(f"Creating missing database tables: {', '.join(missing_tables)}")
+            logger.info(f"Creating missing backend database tables: {', '.join(missing_tables)}")
             Base.metadata.create_all(bind=engine)
-            logger.info("Database tables created successfully")
+            logger.info("Backend database tables created successfully")
         else:
-            logger.debug("All database tables already exist")
+            logger.debug("All backend database tables already exist")
+            
+        logger.info("Backend tables ready. TiMemory tables will be created when memory service is first accessed.")
+        
     except Exception as e:
-        logger.error(f"Error creating database tables: {e}")
+        logger.error(f"Error creating backend database tables: {e}")
         logger.error(f"Connection string host: {settings.tidb_host}:{settings.tidb_port}")
         raise
 

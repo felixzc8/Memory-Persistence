@@ -96,6 +96,26 @@ Output: {{"memories": [{{"id": "f6g7h8i9-j0k1-2345-fghi-678901234567", "user_id"
 """
 
 
+CONVERSATION_SUMMARY_PROMPT = """You are tasked with creating a concise summary of a conversation between a user and an AI assistant.
+
+Focus on:
+- Key topics and decisions discussed
+- User preferences and goals mentioned
+- Important context for continuing the conversation
+- Personal information shared by the user
+
+Keep summary 2-3 paragraphs maximum and maintain chronological flow of important events/topics.
+
+CONVERSATION TO SUMMARIZE:
+{conversation}
+
+EXISTING SUMMARY (if any):
+{existing_summary}
+
+Provide a consolidated summary incorporating both the existing summary and the new conversation content. If no existing summary is provided, create a new summary based on the conversation.
+"""
+
+
 def create_chat_system_prompt(memories_context: str) -> str:
     """Create system prompt with memory context for chat interactions"""
     return f"""You are a helpful and friendly assistant with persistent memory and conversation history.

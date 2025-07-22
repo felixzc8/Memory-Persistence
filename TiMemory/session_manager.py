@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from sqlalchemy.orm import Session as DBSession
 from sqlalchemy import and_, desc
 from .models import Session, Message
@@ -231,5 +231,74 @@ class SessionManager:
         
         return title if title else f"Session {datetime.now(timezone.utc).strftime('%b %d')}"
     
+    def get_session_context_with_summary(self, session_id: str, message_limit: int) -> Tuple[Optional[str], List[Dict[str, str]]]:
+        """Returns (summary, recent_messages) if total > limit, else (None, all_messages)."""
+        with self.db_session_factory() as db:
+            total_count = db.query(Message).filter(Message.session_id == session_id).count()
+            
+            if total_count <= message_limit:
+                return None, self.get_session_context(session_id)
+            
+            session = db.query(Session).filter(Session.session_id == session_id).first()
+            if not session:
+                return None, []
+            
+            recent_messages = db.query(Message).filter(
+                Message.session_id == session_id
+            ).order_by(Message.created_at.desc()).limit(message_limit).all()
+            
+            recent_context = [{"role": msg.role, "content": msg.content} for msg in reversed(recent_messages)]
+            return session.summary, recent_context
+
+    def update_session_summary(self, session_id: str, summary: str, message_count: int) -> bool:
+        """Store summary and update message count tracker."""
+        with self.db_session_factory() as db:
+            try:
+                session = db.query(Session).filter(Session.session_id == session_id).first()
+                if not session:
+                    return False
+                
+                session.summary = summary
+                session.last_summary_message_count = message_count
+                db.commit()
+                
+                logger.info(f"Updated summary for session {session_id}")
+                return True
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Error updating summary for session {session_id}: {e}")
+                return False
+
+    def get_message_count(self, session_id: str) -> int:
+        """Get total message count for session."""
+        with self.db_session_factory() as db:
+            return db.query(Message).filter(Message.session_id == session_id).count()
+
+    def get_session_summary(self, session_id: str) -> Optional[str]:
+        """Get current session summary."""
+        with self.db_session_factory() as db:
+            session = db.query(Session).filter(Session.session_id == session_id).first()
+            return session.summary if session else None
+
+    def should_generate_summary(self, session_id: str, message_limit: int, summary_threshold: int) -> bool:
+        """Check if summary should be generated based on message count threshold."""
+        with self.db_session_factory() as db:
+            session = db.query(Session).filter(Session.session_id == session_id).first()
+            if not session:
+                return False
+            
+            current_count = self.get_message_count(session_id)
+            
+            # First summary when limit exceeded
+            if current_count > message_limit and session.summary is None:
+                return True
+            
+            # Regenerate every summary_threshold messages after last summary
+            if current_count > message_limit:
+                messages_since_summary = current_count - (session.last_summary_message_count or 0)
+                return messages_since_summary >= summary_threshold
+            
+            return False
+
 
 session_manager = SessionManager()

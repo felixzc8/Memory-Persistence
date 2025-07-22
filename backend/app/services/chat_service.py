@@ -48,7 +48,11 @@ class ChatService:
                 
                 yield f"event: session_created\ndata: {json.dumps({'session_id': session_id, 'title': title})}\n\n"
             
-            session_context = memory_service.memory.session_manager.get_session_context(session_id, limit=20)
+            # Get context with summary if needed
+            summary, session_context = memory_service.memory.session_manager.get_session_context_with_summary(
+                session_id, 
+                memory_service.memory.message_limit
+            )
             
             memories_context = memory_service.get_memory_context(
                 query=message, 
@@ -68,6 +72,9 @@ class ChatService:
             system_prompt = create_chat_system_prompt(memories_context)
             
             messages = [{"role": "system", "content": system_prompt}]
+            # Add conversation summary if available
+            if summary:
+                messages.append({"role": "system", "content": f"Previous conversation summary: {summary}"})
             messages.extend(session_context)
             messages.append({"role": "user", "content": message})
             
@@ -94,7 +101,7 @@ class ChatService:
                 {"role": "assistant", "content": full_response}
             ]
             
-            memory_service.add_memory(conversation_messages, user_id)
+            await memory_service.add_memory(conversation_messages, user_id, session_id)
             
             completion_data = {
                 'session_id': session_id,
@@ -132,7 +139,11 @@ class ChatService:
                 session_id = session_response.session_id
                 logger.info(f"Created new session {session_id} for user {user_id}")
             
-            session_context = memory_service.memory.session_manager.get_session_context(session_id, limit=15)
+            # Get context with summary if needed
+            summary, session_context = memory_service.memory.session_manager.get_session_context_with_summary(
+                session_id, 
+                memory_service.memory.message_limit
+            )
             
             memories_context = memory_service.get_memory_context(
                 query=message, 
@@ -150,6 +161,9 @@ class ChatService:
             system_prompt = create_chat_system_prompt(memories_context)
             
             messages = [{"role": "system", "content": system_prompt}]
+            # Add conversation summary if available
+            if summary:
+                messages.append({"role": "system", "content": f"Previous conversation summary: {summary}"})
             messages.extend(session_context)
             messages.append({"role": "user", "content": message})
             response = self.client.chat.completions.create(
@@ -168,7 +182,7 @@ class ChatService:
                 {"role": "assistant", "content": assistant_response}
             ]
             
-            memory_service.add_memory(conversation_messages, user_id)
+            await memory_service.add_memory(conversation_messages, user_id, session_id)
             
             return ChatResponse(
                 response=assistant_response,

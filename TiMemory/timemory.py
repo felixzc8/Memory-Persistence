@@ -1,4 +1,4 @@
-from .prompts import FACT_EXTRACTION_PROMPT, MEMORY_CONSOLIDATION_PROMPT
+from .prompts import FACT_EXTRACTION_PROMPT, MEMORY_CONSOLIDATION_PROMPT, CONVERSATION_SUMMARY_PROMPT
 from .llms.openai import OpenAILLM
 from .embedding.openai import OpenAIEmbeddingModel
 from .tidb_vector import TiDBVector
@@ -13,10 +13,13 @@ import logging
 import json
 
 class TiMemory:
-    def __init__(self, config: MemoryConfig):
+    def __init__(self, config: MemoryConfig, message_limit: int = 20, summary_threshold: int = 10):
         self.fact_extraction_prompt = FACT_EXTRACTION_PROMPT
         self.memory_consolidation_prompt = MEMORY_CONSOLIDATION_PROMPT
+        self.conversation_summary_prompt = CONVERSATION_SUMMARY_PROMPT
         self.config = config
+        self.message_limit = message_limit
+        self.summary_threshold = summary_threshold
 
         # Initialize TiMemory's own database connection
         database.initialize_database(config)
@@ -41,28 +44,38 @@ class TiMemory:
         
         self.logger = logging.getLogger(__name__)
         
-    def process_messages(self, messages: List[Dict[str, str]], user_id: str):
+    async def process_messages(self, messages: List[Dict[str, str]], user_id: str, session_id: str = None):
         """
         Process a conversation between user and AI assistant.
-        Extract memories, consolidate with existing ones, and update TiDB.
+        Extract memories, consolidate with existing ones, update TiDB, and handle summary generation.
         """
         self.logger.info(f"Starting process_messages for user {user_id}")
         new_memories_response = self._extract_memories(messages)
         self.logger.info(f"Extracted {len(new_memories_response.memories)} memories: {new_memories_response.memories}")
         
         if not new_memories_response or not new_memories_response.memories:
-            self.logger.info("No memories extracted, returning early")
-            return
+            self.logger.info("No memories extracted, but checking for summary generation")
+        else:
+            existing_memories = self._find_similar_memories(new_memories_response.memories, user_id)
+            if len(existing_memories.memories) == 0:
+                self.logger.info("No similar existing memories found, storing new memories directly")
+                self._store_memories(new_memories_response.memories, user_id)
+            else:
+                consolidated_response = self._consolidate_memories(existing_memories, new_memories_response.memories)
+                self.logger.info(f"Storing {len(consolidated_response.memories)} consolidated memories: {consolidated_response.memories}")
+                self._store_memories(consolidated_response.memories, user_id)
         
-        existing_memories = self._find_similar_memories(new_memories_response.memories, user_id)
-        if len(existing_memories.memories) == 0:
-            self.logger.info("No similar existing memories found, storing new memories directly")
-            self._store_memories(new_memories_response.memories, user_id)
-            return
-        consolidated_response = self._consolidate_memories(existing_memories, new_memories_response.memories)
-        
-        self.logger.info(f"Storing {len(consolidated_response.memories)} consolidated memories: {consolidated_response.memories}")
-        self._store_memories(consolidated_response.memories, user_id)
+        # Handle conversation summary generation if session_id provided
+        if session_id and self.session_manager.should_generate_summary(
+            session_id, 
+            self.message_limit, 
+            self.summary_threshold
+        ):
+            self.logger.info(f"Generating summary for session {session_id}")
+            current_summary = self.session_manager.get_session_summary(session_id)
+            new_summary = await self.generate_conversation_summary(session_id, current_summary)
+            current_count = self.session_manager.get_message_count(session_id)
+            self.session_manager.update_session_summary(session_id, new_summary, current_count)
 
     
     
@@ -161,3 +174,42 @@ class TiMemory:
                     content=memory.content,
                     memory_attributes=memory.memory_attributes.model_dump()
                 )
+
+    async def generate_conversation_summary(self, session_id: str, existing_summary: str = None) -> str:
+        """Generate summary for messages beyond limit - summary_threshold to avoid knowledge gaps."""
+        from .models.message import Message
+        
+        # Get all messages for the session
+        with database.SessionLocal() as db:
+            all_messages = db.query(Message).filter(
+                Message.session_id == session_id
+            ).order_by(Message.created_at).all()
+            
+            total_messages = len(all_messages)
+            if total_messages <= self.message_limit:
+                return existing_summary or ""
+            
+            # Summarize up to (message_limit - summary_threshold) to prevent knowledge gaps
+            # This ensures continuity between summary and recent context
+            summary_cutoff = self.message_limit - self.summary_threshold
+            messages_to_summarize = all_messages[:summary_cutoff]
+            
+            if not messages_to_summarize:
+                return existing_summary or ""
+            
+            conversation_text = "\n\n".join([
+                f"{'User' if msg.role == 'user' else 'Assistant'}: {msg.content}" 
+                for msg in messages_to_summarize
+            ])
+            
+            summary_prompt = self.conversation_summary_prompt.format(
+                conversation=conversation_text,
+                existing_summary=existing_summary or "None"
+            )
+            
+            # Use the existing generate_response method with plain text input
+            response = self.llm.generate_response(
+                instructions=summary_prompt,
+                input=[{"role": "user", "content": "Generate the summary"}]
+            )
+            return response.response_text.strip() if hasattr(response, 'response_text') else str(response).strip()

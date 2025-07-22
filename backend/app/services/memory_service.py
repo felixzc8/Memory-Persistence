@@ -25,11 +25,11 @@ class MemoryService:
             logger.error(f"Error searching memories for user {user_id}: {e}")
             raise ChatException(f"Memory search failed for user {user_id}") from e
     
-    def add_memory(self, messages: List[Dict[str, str]], user_id: str) -> bool:
+    async def add_memory(self, messages: List[Dict[str, str]], user_id: str, session_id: str = None) -> bool:
         """Add conversation to memory"""
         try:
             logger.info(f"Memory service add_memory called for user {user_id}")
-            self.memory.process_messages(messages, user_id=user_id)
+            await self.memory.process_messages(messages, user_id=user_id, session_id=session_id)
             logger.info(f"Added memory for user {user_id}")
             return True
         except Exception as e:
