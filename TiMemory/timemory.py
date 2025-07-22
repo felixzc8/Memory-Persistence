@@ -10,7 +10,6 @@ from .config.base import MemoryConfig
 
 from uuid import uuid4
 import logging
-import json
 
 class TiMemory:
     def __init__(self, config: MemoryConfig, message_limit: int = 20, summary_threshold: int = 10):
@@ -101,7 +100,7 @@ class TiMemory:
         """
         self.logger.info(f"Extracting memories from messages: {messages}")
         try:
-            response = self.llm.generate_response(
+            response = self.llm.generate_parsed_response(
                 instructions=self.fact_extraction_prompt,
                 input=messages,
                 text_format=MemoryResponse
@@ -119,14 +118,14 @@ class TiMemory:
         """
         Resolve new memories against existing ones using the fact update memory prompt.
         """
-        existing_dicts = [memory.model_dump(mode='json') for memory in existing_memories.memories]
-        new_dicts = [memory.model_dump(mode='json') for memory in new_memories]
-        
-        input_data = f'{{"existing_memories": {existing_dicts}, "new_memories": {new_dicts}}}'
+        input_data = {
+            "existing_memories": [memory.model_dump() for memory in existing_memories.memories],
+            "new_memories": [memory.model_dump() for memory in new_memories]
+        }
         
         self.logger.info(f"Consolidating memories: {input_data}")
         
-        response = self.llm.generate_response(
+        response = self.llm.generate_parsed_response(
             instructions=self.memory_consolidation_prompt,
             input=input_data,
             text_format=MemoryResponse
@@ -179,7 +178,6 @@ class TiMemory:
         """Generate summary for messages beyond limit - summary_threshold to avoid knowledge gaps."""
         from .models.message import Message
         
-        # Get all messages for the session
         with database.SessionLocal() as db:
             all_messages = db.query(Message).filter(
                 Message.session_id == session_id
@@ -188,28 +186,23 @@ class TiMemory:
             total_messages = len(all_messages)
             if total_messages <= self.message_limit:
                 return existing_summary or ""
-            
-            # Summarize up to (message_limit - summary_threshold) to prevent knowledge gaps
-            # This ensures continuity between summary and recent context
+
             summary_cutoff = self.message_limit - self.summary_threshold
             messages_to_summarize = all_messages[:summary_cutoff]
             
             if not messages_to_summarize:
                 return existing_summary or ""
             
-            conversation_text = "\n\n".join([
-                f"{'User' if msg.role == 'user' else 'Assistant'}: {msg.content}" 
-                for msg in messages_to_summarize
-            ])
+            conversation_data = {
+                "conversation": [
+                    {"role": msg.role, "content": msg.content} 
+                    for msg in messages_to_summarize
+                ],
+                "existing_summary": existing_summary or "None"
+            }
             
-            summary_prompt = self.conversation_summary_prompt.format(
-                conversation=conversation_text,
-                existing_summary=existing_summary or "None"
-            )
-            
-            # Use the existing generate_response method with plain text input
             response = self.llm.generate_response(
-                instructions=summary_prompt,
-                input=[{"role": "user", "content": "Generate the summary"}]
+                instructions=self.conversation_summary_prompt,
+                input=conversation_data
             )
             return response.response_text.strip() if hasattr(response, 'response_text') else str(response).strip()
