@@ -46,6 +46,50 @@
   font-style: italic;
 }
 
+/* Markdown styling for messages */
+.message p {
+  margin: 0.5em 0;
+}
+
+.message p:first-child {
+  margin-top: 0;
+}
+
+.message p:last-child {
+  margin-bottom: 0;
+}
+
+.message strong {
+  font-weight: bold;
+}
+
+.message em {
+  font-style: italic;
+}
+
+.message code {
+  background-color: #2a2a2a;
+  color: #ff6b6b;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.message pre {
+  background-color: #2a2a2a;
+  color: #ffffff;
+  padding: 10px;
+  border-radius: 5px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+
+.message pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+
 .input-container {
   display: flex;
   align-items: center;
