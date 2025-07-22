@@ -25,64 +25,57 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 - **Content Negotiation**: 
   - `Accept: application/json` → Returns `ChatResponse` JSON object
   - `Accept: text/event-stream` → Returns streaming response via Server-Sent Events
-- Authentication: Requires valid user_id
 
 ```bash
-# Create new chat session (JSON response)
+# JSON response
 curl -X POST "http://localhost:8000/api/v1/chat/user123/new" \
   -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{"message": "Hello, how are you?"}'
+  -d '{"message": "Hello!", "user_id": "user123"}'
 
 # Response:
 {
+  "response": "Hello! How can I help you today?",
+  "user_id": "user123",
   "session_id": "uuid-string",
-  "response": "Hello! I'm doing well, thank you for asking...",
+  "memories_used": [],
   "timestamp": "2024-01-15T10:30:00Z"
 }
 
-# Create new chat session (streaming response)
+# Streaming response
 curl -X POST "http://localhost:8000/api/v1/chat/user123/new" \
-  -H "Content-Type: application/json" \
   -H "Accept: text/event-stream" \
-  -d '{"message": "Tell me a story"}'
+  -d '{"message": "Tell me a story", "user_id": "user123"}'
 
 # Response (Server-Sent Events):
-data: {"session_id": "uuid-string"}
+event: session_created
+data: {"session_id": "uuid-string", "title": "Tell me a story"}
 
+event: content
 data: {"content": "Once"}
 
-data: {"content": " upon"}
-
-data: {"content": " a"}
-
-data: {"content": " time..."}
+event: content
+data: {"content": " upon a time..."}
 ```
 
-**POST** `/{user_id}/{session_id}` - Continue existing chat session  
-- Continues conversation in existing session
-- **Content Negotiation**:
-  - `Accept: application/json` → Returns `ChatResponse` JSON object
-  - `Accept: text/event-stream` → Returns streaming response via Server-Sent Events
-- Authentication: Requires valid user_id and session ownership
+**POST** `/{user_id}/{session_id}` - Continue existing chat session
 
 ```bash
 # Continue existing chat session
 curl -X POST "http://localhost:8000/api/v1/chat/user123/session-uuid-123" \
   -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{"message": "What did we talk about earlier?"}'
+  -d '{"message": "What did we talk about earlier?", "user_id": "user123"}'
 
 # Response:
 {
   "response": "Earlier we discussed...",
+  "user_id": "user123",
+  "session_id": "session-uuid-123",
+  "memories_used": ["User asked about previous topics"],
   "timestamp": "2024-01-15T10:35:00Z"
 }
 ```
 
 **GET** `/{user_id}/sessions` - List user sessions
-- Returns: `SessionListResponse` with all user sessions
-- Includes: session metadata, total count
 
 ```bash
 # List user sessions
@@ -92,27 +85,20 @@ curl -X GET "http://localhost:8000/api/v1/chat/user123/sessions"
 {
   "sessions": [
     {
-      "id": "session-uuid-123",
+      "session_id": "session-uuid-123",
+      "user_id": "user123",
       "title": "Story Discussion",
       "created_at": "2024-01-15T10:30:00Z",
-      "updated_at": "2024-01-15T10:35:00Z",
+      "last_activity": "2024-01-15T10:35:00Z",
       "message_count": 4
-    },
-    {
-      "id": "session-uuid-456",
-      "title": "Technical Questions",
-      "created_at": "2024-01-14T15:20:00Z",
-      "updated_at": "2024-01-14T15:45:00Z",
-      "message_count": 8
     }
   ],
-  "total": 2
+  "user_id": "user123",
+  "total_count": 1
 }
 ```
 
 **GET** `/{user_id}/sessions/{session_id}` - Get specific session
-- Returns: `Session` object with full session details
-- Validation: User ownership verification
 
 ```bash
 # Get specific session details
@@ -120,31 +106,28 @@ curl -X GET "http://localhost:8000/api/v1/chat/user123/sessions/session-uuid-123
 
 # Response:
 {
-  "id": "session-uuid-123",
+  "session_id": "session-uuid-123",
   "user_id": "user123",
   "title": "Story Discussion",
-  "created_at": "2024-01-15T10:30:00Z",
-  "updated_at": "2024-01-15T10:35:00Z",
   "messages": [
     {
-      "id": "msg-1",
       "role": "user",
       "content": "Tell me a story",
       "timestamp": "2024-01-15T10:30:00Z"
     },
     {
-      "id": "msg-2",
       "role": "assistant",
       "content": "Once upon a time...",
       "timestamp": "2024-01-15T10:30:15Z"
     }
-  ]
+  ],
+  "created_at": "2024-01-15T10:30:00Z",
+  "last_activity": "2024-01-15T10:35:00Z",
+  "message_count": 2
 }
 ```
 
 **PUT** `/{user_id}/sessions/{session_id}` - Update session metadata
-- Request: `UpdateSessionRequest` (title, notes, etc.)
-- Returns: Success confirmation message
 
 ```bash
 # Update session title
@@ -173,9 +156,6 @@ curl -X DELETE "http://localhost:8000/api/v1/chat/user123/sessions/session-uuid-
 ```
 
 **POST** `/{user_id}/memories/search` - Search user memories
-- Request: `MemorySearchRequest` with query and limit
-- Returns: `MemorySearchResponse` with matching memories
-- Uses vector similarity search
 
 ```bash
 # Search user memories
@@ -183,32 +163,22 @@ curl -X POST "http://localhost:8000/api/v1/chat/user123/memories/search" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "programming languages",
+    "user_id": "user123",
     "limit": 5
   }'
 
 # Response:
 {
   "memories": [
-    {
-      "id": "memory-uuid-1",
-      "content": "User prefers Python for data analysis projects",
-      "similarity_score": 0.95,
-      "created_at": "2024-01-10T14:20:00Z"
-    },
-    {
-      "id": "memory-uuid-2",
-      "content": "User is learning JavaScript for web development",
-      "similarity_score": 0.87,
-      "created_at": "2024-01-12T09:15:00Z"
-    }
+    "User prefers Python for data analysis projects",
+    "User is learning JavaScript for web development"
   ],
-  "total": 2
+  "user_id": "user123",
+  "query": "programming languages"
 }
 ```
 
 **GET** `/{user_id}/memories/summary` - Get conversation summary
-- Returns: AI-generated summary of user's conversation history
-- Useful for understanding user context
 
 ```bash
 # Get conversation summary
@@ -216,14 +186,12 @@ curl -X GET "http://localhost:8000/api/v1/chat/user123/memories/summary"
 
 # Response:
 {
-  "summary": "This user is a software developer interested in data analysis and web development. They prefer Python for data projects and are currently learning JavaScript. They often ask about best practices and optimization techniques.",
-  "generated_at": "2024-01-15T11:00:00Z"
+  "user_id": "user123",
+  "summary": "This user is a software developer interested in data analysis and web development."
 }
 ```
 
 **DELETE** `/{user_id}/memories` - Delete all user memories
-- Removes all stored memories for the user
-- Returns: Success confirmation message
 
 ```bash
 # Delete all user memories
@@ -231,14 +199,11 @@ curl -X DELETE "http://localhost:8000/api/v1/chat/user123/memories"
 
 # Response:
 {
-  "message": "All memories deleted successfully",
-  "deleted_count": 15
+  "message": "Memories deleted for user user123"
 }
 ```
 
 **GET** `/health` - Service health check
-- Returns: Status of chat service, vector store, and database
-- Includes: Timestamp and component health indicators
 
 ```bash
 # Check service health
@@ -247,12 +212,10 @@ curl -X GET "http://localhost:8000/api/v1/chat/health"
 # Response:
 {
   "status": "healthy",
-  "timestamp": "2024-01-15T11:00:00Z",
-  "components": {
-    "database": "healthy",
-    "vector_store": "healthy",
-    "llm_service": "healthy"
-  }
+  "service": "chat",
+  "vector_store": "healthy",
+  "database": "healthy",
+  "timestamp": "2024-01-01T00:00:00Z"
 }
 ```
 
