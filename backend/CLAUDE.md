@@ -1,6 +1,6 @@
 # CLAUDE.md - Backend
 
-This file provides guidance to Claude Code (claude.ai/code) when working with the TiMemory backend.
+This file provides guidance to Claude Code (claude.ai/code) when working with the FastAPI backend.
 
 ## Development Commands
 
@@ -16,178 +16,196 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 - `uv add <package>` - Add new dependencies
 - `uv remove <package>` - Remove dependencies
 
-## Architecture Deep Dive
+## API Documentation
 
-### Core Memory System (`memory/`)
-The heart of TiMemory is a sophisticated memory processing pipeline:
+### Chat Endpoints (`/api/v1/chat`)
 
-**TiMem Class (`memory/timemory.py`):**
-- **Memory Extraction**: Uses `FACT_EXTRACTION_PROMPT` to identify facts from conversations
-- **Similarity Search**: Finds related memories using vector embeddings
-- **Memory Consolidation**: Uses `MEMORY_CONSOLIDATION_PROMPT` to merge new/existing memories
-- **Vector Storage**: Stores memories with embeddings in TiDB vector database
+**POST** `/{user_id}/new` - Create new chat session
+- Creates new session and processes first message
+- **Content Negotiation**: 
+  - `Accept: application/json` → Returns `ChatResponse` JSON object
+  - `Accept: text/event-stream` → Returns streaming response via Server-Sent Events
+- Authentication: Requires valid user_id
 
-**Key Methods:**
-- `process_messages()` - Main pipeline for processing user-AI conversations
-- `search()` - Vector similarity search for memory retrieval
-- `_extract_memories()` - LLM-based fact extraction
-- `_consolidate_memories()` - Intelligent memory merging
-- `_store_memories()` - Database persistence with embeddings
+**POST** `/{user_id}/{session_id}` - Continue existing chat session  
+- Continues conversation in existing session
+- **Content Negotiation**:
+  - `Accept: application/json` → Returns `ChatResponse` JSON object
+  - `Accept: text/event-stream` → Returns streaming response via Server-Sent Events
+- Authentication: Requires valid user_id and session ownership
 
-**Vector Database (`memory/tidb_vector.py`):**
-- Custom TiDB vector operations with SSL support
-- Handles embedding storage and similarity search
-- User isolation through user_id filtering
+**GET** `/{user_id}/sessions` - List user sessions
+- Returns: `SessionListResponse` with all user sessions
+- Includes: session metadata, total count
 
-### FastAPI Application Structure
+**GET** `/{user_id}/sessions/{session_id}` - Get specific session
+- Returns: `Session` object with full session details
+- Validation: User ownership verification
 
-**Main App (`app/main.py`):**
-- FastAPI app with Logfire instrumentation for observability
-- CORS middleware for frontend integration
-- Custom exception handlers for different error types
-- Lifespan context manager for database initialization
+**PUT** `/{user_id}/sessions/{session_id}` - Update session metadata
+- Request: `UpdateSessionRequest` (title, notes, etc.)
+- Returns: Success confirmation message
 
-**Routers (`app/routers/`):**
-- `chat.py` - Chat endpoints with streaming support, session management
-- `admin.py` - Administrative operations for users and sessions
+**DELETE** `/{user_id}/sessions/{session_id}` - Delete session
+- Removes session and all associated messages
+- Returns: Success confirmation message
 
-**Services Layer (`app/services/`):**
-- `chat_service.py` - OpenAI integration with memory context and streaming
-- `memory_service.py` - TiMem wrapper with FastAPI integration
-- `user_service.py` - User management and authentication
-- `session_service.py` - Session creation, management, and title generation
+**POST** `/{user_id}/memories/search` - Search user memories
+- Request: `MemorySearchRequest` with query and limit
+- Returns: `MemorySearchResponse` with matching memories
+- Uses vector similarity search
 
-**Key Service Features:**
-- **Streaming Chat**: `chat_with_memory_stream()` provides real-time responses
-- **Memory Integration**: Automatic memory processing after conversations
-- **Session Management**: Automatic session creation with AI-generated titles
+**GET** `/{user_id}/memories/summary` - Get conversation summary
+- Returns: AI-generated summary of user's conversation history
+- Useful for understanding user context
 
-**Models (`app/models/`):**
-- SQLAlchemy ORM models for Users, Sessions, and Messages
-- Database relationships and constraints
-- Timestamp tracking for all entities
+**DELETE** `/{user_id}/memories` - Delete all user memories
+- Removes all stored memories for the user
+- Returns: Success confirmation message
 
-**Schemas (`app/schemas/`):**
-Pydantic models for data validation:
-- `chat.py` - Chat messages, responses, and streaming data
-- `memory.py` - Memory structures with attributes (type, status)
-- `user.py` - User registration, login, and profile data
-- `session.py` - Session creation and management
-- `error.py` - Structured error responses
+**GET** `/health` - Service health check
+- Returns: Status of chat service, vector store, and database
+- Includes: Timestamp and component health indicators
 
-**Dependencies (`app/dependencies/`):**
-FastAPI dependency injection:
-- `auth.py` - User authentication guards (`get_authenticated_user`)
-- `memory.py` - Memory service injection
-- `session.py` - Session validation and management
-- `validation.py` - Input validation helpers
+### Admin Endpoints (`/api/v1/admin`)
+- Currently minimal structure for future administrative functions
 
-**Middleware (`app/middleware/`):**
-- `request_id.py` - UUID tracking for request tracing
-- `exception_handler.py` - Structured error handling with different exception types
+## FastAPI Application Architecture
+
+### Main Application (`app/main.py`)
+- **FastAPI App**: Configured with title, description, version
+- **Middleware Stack**:
+  - `RequestIDMiddleware` - UUID tracking for request correlation
+  - `CORSMiddleware` - Frontend integration with full CORS support
+- **Exception Handlers**: Custom handlers for different error types
+- **Observability**: Logfire integration for monitoring and logging
+- **Lifespan Management**: Database table creation on startup
+
+### Services Layer (`app/services/`)
+
+**Chat Service (`chat_service.py`)**:
+- `chat_with_memory()` - Standard chat with memory context integration
+- `chat_with_memory_stream()` - Streaming chat responses using SSE
+- `get_conversation_summary()` - AI-generated conversation summaries
+- OpenAI integration with configurable models
+
+**Memory Service (`memory_service.py`)**:
+- TiMemory system wrapper for FastAPI integration
+- Vector search capabilities for user memories
+- Memory deletion and management operations
+
+**User Service (`user_service.py`)**:
+- User authentication and validation
+- Database health checking
+- User activity tracking
+
+**Session Service (`session_service.py`)**:
+- Session creation with AI-generated titles
+- Session metadata management (update, delete)
+- User session listing and retrieval
+
+### Data Models
+
+**Pydantic Schemas (`app/schemas/`)**:
+- `ChatRequest` / `ChatResponse` - Chat message structures
+- `MemorySearchRequest` / `MemorySearchResponse` - Memory search operations
+- `Session` / `SessionListResponse` / `UpdateSessionRequest` - Session management
+- `User` - User profile and authentication data
+- Error response models for structured API errors
+
+**SQLAlchemy Models (`app/models/`)**:
+- `User` - User accounts with timestamps
+- `Session` - Chat sessions with metadata and user relationships
+- `Message` - Individual chat messages linked to sessions
+- `Memory` - Vector-enabled memory storage (TiDB specific)
+
+### Dependencies (`app/dependencies/`)
+
+**Authentication (`auth.py`)**:
+- `get_authenticated_user()` - User ID validation
+- Simple authentication system (no JWT currently)
+
+**Session Management (`session.py`)**:
+- `get_user_session()` - Session ownership verification
+- Session existence and access validation
+
+**Validation (`validation.py`)**:
+- `validate_chat_request()` - Chat input validation
+- `validate_memory_search_request()` - Search input validation
+
+**Memory Integration (`memory.py`)**:
+- `get_available_memory_service()` - Memory service dependency injection
+
+### Middleware (`app/middleware/`)
+
+**Request ID Tracking (`request_id.py`)**:
+- Generates UUID for each request
+- Enables request correlation across logs
+- Adds request ID to response headers
+
+**Exception Handling (`exception_handler.py`)**:
+- `DatabaseException` - Database connectivity and query errors
+- `ValidationException` - Input validation failures  
+- `ChatException` - LLM and chat processing errors
+- `HTTPException` - Standard HTTP errors
+- Structured error responses with error codes and request IDs
 
 ### Configuration (`app/core/config.py`)
 
-Environment-based settings using Pydantic:
-- **OpenAI**: API key, model choice (gpt-4o-mini), embedding model
-- **TiDB**: Connection parameters with SSL certificate configuration
-- **API**: Host, port, debug mode settings
+**Environment Settings**:
+- **OpenAI Configuration**: API key, model selection (gpt-4o-mini), embeddings
+- **TiDB Settings**: Host, port, credentials, SSL configuration
+- **API Settings**: Host (0.0.0.0), port (8000), debug mode
 - **Observability**: Logfire token for monitoring
 
-**Key Configuration Properties:**
-- `tidb_connection_string` - Constructs SSL-enabled connection string
-- Automatic SSL certificate path detection
-- Environment variable loading with .env support
+**Key Properties**:
+- `tidb_connection_string` - SSL-enabled database connection
+- Automatic SSL certificate detection
+- `.env` file support for local development
 
-### Memory Processing Pipeline
+### Database Integration (`app/db/`)
 
-**1. Message Input**
-- Receives user-AI conversation history
-- Validates message structure and authentication
-
-**2. Fact Extraction**
-- Uses OpenAI with structured output (Pydantic models)
-- Extracts facts categorized by type: personal, preference, activity, plan, health, professional
-- Generates unique IDs for each memory
-
-**3. Similarity Search**
-- Embeds new memories using OpenAI embeddings (text-embedding-3-small)
-- Searches existing memories using TiDB vector operations
-- Finds related memories for consolidation
-
-**4. Memory Consolidation**
-- Uses LLM to intelligently merge new and existing memories
-- Avoids duplication while preserving important information
-- Updates memory status (active, outdated)
-
-**5. Storage**
-- Stores consolidated memories with vector embeddings
-- Maintains user isolation through user_id partitioning
-- Updates existing memories or creates new ones based on status
-
-### Database Schema
-
-**Core Tables:**
-- `users` - User authentication and profile information
-- `sessions` - Conversation sessions with metadata
-- `messages` - Individual chat messages with session relationship
-- `memories` (TiDB vector table) - Persistent memory storage with embeddings
-
-**Key Relationships:**
-- Users have many sessions and messages
-- Sessions belong to users and contain many messages
-- Memories are isolated per user with vector similarity search
-
-### Error Handling
-
-**Custom Exception Types:**
-- `DatabaseException` - Database connection and query errors
-- `ValidationException` - Input validation failures
-- `ChatException` - OpenAI API and chat processing errors
-
-**Exception Handlers:**
-- Structured error responses with error codes
-- Request ID tracking for debugging
-- Comprehensive logging with Logfire integration
-
-### Security Features
-
-**Authentication:**
-- Simple user ID based authentication (no JWT in current implementation)
-- User isolation at database and service levels
-- Automatic user creation and activity tracking
-
-**Data Protection:**
-- SSL-enabled TiDB connections with certificate verification
-- User memory isolation through database partitioning
-- Input validation using Pydantic schemas
+**Database Connection (`database.py`)**:
+- SQLAlchemy engine configuration
+- SSL-enabled TiDB connections
+- Automatic table creation utilities
+- Connection pooling and management
 
 ## Development Workflow
 
-**Adding New Features:**
-1. Define Pydantic schemas in `app/schemas/`
-2. Implement business logic in `app/services/`
-3. Create API endpoints in `app/routers/`
-4. Add dependency injection in `app/dependencies/`
-5. Update database models if needed in `app/models/`
+### Adding New API Endpoints
+1. Define request/response schemas in `app/schemas/`
+2. Implement business logic in appropriate service (`app/services/`)
+3. Create API endpoint in `app/api/v1/`
+4. Add authentication/validation dependencies
+5. Consider content negotiation if multiple response types needed
+6. Update documentation and error handling
 
-**Memory System Extensions:**
-- Modify prompts in `memory/prompts.py`
-- Extend memory attributes in schemas
-- Update TiDB vector operations for new features
-- Adjust consolidation logic in TiMem class
+### Extending Memory Functionality
+1. Update memory schemas for new fields/operations
+2. Extend memory service methods
+3. Add new API endpoints for memory operations
+4. Test vector search and storage functionality
 
-**Testing:**
-- Use `uv run pytest` for running tests (when test suite is added)
-- Test memory processing with sample conversations
-- Validate vector search functionality
-- Check streaming chat responses
+### Error Handling Best Practices
+- Use appropriate custom exception types
+- Include request IDs in error responses
+- Log errors with structured data for observability
+- Provide meaningful error messages for API consumers
 
-## Key Files to Understand
+### Security Considerations
+- All chat endpoints require user authentication
+- Session endpoints validate user ownership
+- Memory operations are user-isolated
+- SSL-enabled database connections
+- Input validation on all endpoints
+
+## Key Files Reference
 
 1. `app/main.py` - Application entry point and configuration
-2. `memory/timemory.py` - Core memory processing logic
-3. `app/services/chat_service.py` - Chat and streaming functionality
-4. `app/core/config.py` - Environment configuration
-5. `memory/prompts.py` - LLM prompts for memory extraction/consolidation
-6. `app/routers/chat.py` - API endpoints and request handling
+2. `app/api/v1/chat.py` - Primary API endpoints and routing
+3. `app/services/chat_service.py` - Chat logic with streaming support
+4. `app/core/config.py` - Environment and database configuration
+5. `app/dependencies/auth.py` - Authentication and user validation
+6. `app/middleware/exception_handler.py` - Error handling and responses
+7. `app/schemas/chat.py` - API request/response data structures

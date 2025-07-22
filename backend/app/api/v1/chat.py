@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
-from app.schemas.chat import ChatRequest, ChatResponse
+from app.schemas.chat import ChatRequest
 from app.schemas.memory import MemorySearchRequest, MemorySearchResponse
 from app.schemas.session import (
     Session,
@@ -20,34 +20,80 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-@router.post("/{user_id}/new", response_model=ChatResponse)
-async def new_chat_session(user_id: str, request: ChatRequest):
+@router.post("/{user_id}/new")
+async def new_chat_session(user_id: str, request: ChatRequest, req: Request):
     """
     Create new session and send first message
+    Supports both streaming (Accept: text/event-stream) and regular (Accept: application/json) responses
     """
     await validate_chat_request(user_id, request)
     await get_authenticated_user(user_id)
     
-    return await chat_service.chat_with_memory(
-        message=request.message,
-        user_id=user_id,
-        session_id=None
-    )
+    accept_header = req.headers.get("accept", "application/json")
+    
+    if "text/event-stream" in accept_header:
+        # Return streaming response
+        stream_generator = chat_service.chat_with_memory_stream(
+            message=request.message,
+            user_id=user_id,
+            session_id=None
+        )
+        
+        return StreamingResponse(
+            stream_generator, 
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Cache-Control"
+            }
+        )
+    else:
+        # Return regular JSON response
+        return await chat_service.chat_with_memory(
+            message=request.message,
+            user_id=user_id,
+            session_id=None
+        )
 
-@router.post("/{user_id}/{session_id}", response_model=ChatResponse)
-async def continue_chat_session(user_id: str, session_id: str, request: ChatRequest):
+@router.post("/{user_id}/{session_id}")
+async def continue_chat_session(user_id: str, session_id: str, request: ChatRequest, req: Request):
     """
     Continue conversation in existing session
+    Supports both streaming (Accept: text/event-stream) and regular (Accept: application/json) responses
     """
     await validate_chat_request(user_id, request)
     await get_user_session(session_id, user_id)
     await get_authenticated_user(user_id)
     
-    return await chat_service.chat_with_memory(
-        message=request.message,
-        user_id=user_id,
-        session_id=session_id
-    )
+    accept_header = req.headers.get("accept", "application/json")
+    
+    if "text/event-stream" in accept_header:
+        # Return streaming response
+        stream_generator = chat_service.chat_with_memory_stream(
+            message=request.message,
+            user_id=user_id,
+            session_id=session_id
+        )
+        
+        return StreamingResponse(
+            stream_generator, 
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Cache-Control"
+            }
+        )
+    else:
+        # Return regular JSON response
+        return await chat_service.chat_with_memory(
+            message=request.message,
+            user_id=user_id,
+            session_id=session_id
+        )
 
 @router.get("/{user_id}/sessions", response_model=SessionListResponse)
 async def get_user_sessions(user_id: str):
@@ -156,53 +202,3 @@ async def health_check():
         "timestamp": "2024-01-01T00:00:00Z"
     }
 
-@router.post("/{user_id}/new/stream")
-async def new_chat_session_stream(user_id: str, request: ChatRequest):
-    """
-    Streaming chat endpoint for new sessions using Server-Sent Events
-    """
-    await validate_chat_request(user_id, request)
-    await get_authenticated_user(user_id)
-    
-    stream_generator = chat_service.chat_with_memory_stream(
-        message=request.message,
-        user_id=user_id,
-        session_id=None
-    )
-    
-    return StreamingResponse(
-        stream_generator, 
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "Cache-Control"
-        }
-    )
-
-@router.post("/{user_id}/{session_id}/stream")
-async def continue_chat_session_stream(user_id: str, session_id: str, request: ChatRequest):
-    """
-    Streaming chat endpoint for existing sessions using Server-Sent Events
-    """
-    await validate_chat_request(user_id, request)
-    await get_user_session(session_id, user_id)
-    await get_authenticated_user(user_id)
-    
-    stream_generator = chat_service.chat_with_memory_stream(
-        message=request.message,
-        user_id=user_id,
-        session_id=session_id
-    )
-    
-    return StreamingResponse(
-        stream_generator, 
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "Cache-Control"
-        }
-    )

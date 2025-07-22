@@ -2,8 +2,8 @@ import logging
 from logging import basicConfig
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers.chat import router as chat_router
-from app.routers.admin import router as admin_router
+from app.api.v1.chat import router as chat_router
+from app.api.v1.admin import router as admin_router
 from app.core.config import settings
 from app.db.database import create_tables
 from app.middleware.request_id import RequestIDMiddleware
