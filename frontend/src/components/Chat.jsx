@@ -408,29 +408,29 @@ function Chat({ username, userId, onSignout }) {
         <div className="chat-messages">
           {messages.map((message, index) => (
             <div key={index} className={`message message-${message.type}`}>
-              <span style={{ color: '#666', fontSize: '12px' }}>
+              <span style={{ color: '#666666', fontSize: '12px' }}>
                 [{formatTimestamp(message.timestamp)}]
               </span>
               {message.type === 'user' && (
                 <span style={{ color: '#00ff00' }}> {username}$: </span>
               )}
               {message.type === 'assistant' && (
-                <span style={{ color: '#27ca3f' }}> assistant: </span>
+                <span style={{ color: '#cccccc' }}> assistant: </span>
               )}
               {message.type === 'system' && (
-                <span style={{ color: '#ffbd2e' }}> system: </span>
+                <span style={{ color: '#888888' }}> system: </span>
               )}
-              <span>{message.content}{message.isStreaming && <span className="cursor">|</span>}</span>
+              <span>{message.content}{message.isStreaming && <span className="cursor"></span>}</span>
             </div>
           ))}
           {isLoading && !isStreaming && (
             <div className="message loading">
-              <span style={{ color: '#666', fontSize: '12px' }}>
+              <span style={{ color: '#666666', fontSize: '12px' }}>
                 [{formatTimestamp(new Date())}]
               </span>
-              <span style={{ color: '#27ca3f' }}> assistant: </span>
+              <span style={{ color: '#cccccc' }}> assistant: </span>
               <span>Thinking...</span>
-              <span className="cursor">|</span>
+              <span className="cursor"></span>
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -448,7 +448,6 @@ function Chat({ username, userId, onSignout }) {
             placeholder="Type message, 'sessions', or 'new'..."
             disabled={isLoading || isStreaming}
           />
-          {!isLoading && !isStreaming && <span className="cursor">|</span>}
           <button 
             className="sessions-btn"
             onClick={() => setShowSessions(!showSessions)}

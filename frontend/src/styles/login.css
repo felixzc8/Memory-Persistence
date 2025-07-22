@@ -13,14 +13,14 @@
 }
 
 .welcome-text h1 {
-  color: #00ff00;
+  color: #DC150B;
   font-size: 24px;
   margin-bottom: 10px;
   font-weight: normal;
 }
 
 .welcome-text p {
-  color: #888;
+  color: #cccccc;
   font-size: 16px;
 }
 
@@ -39,19 +39,19 @@
   outline: none;
   padding: 8px 0;
   min-width: 200px;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid #555555;
 }
 
 .username-input::placeholder {
-  color: #666;
+  color: #888888;
 }
 
 .username-input:focus {
-  border-bottom-color: #00ff00;
+  border-bottom-color: #DC150B;
 }
 
 .prompt {
-  color: #00ff00;
+  color: #DC150B;
   margin-right: 10px;
   user-select: none;
 }

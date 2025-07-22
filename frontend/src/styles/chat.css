@@ -1,7 +1,7 @@
 .terminal-body {
   flex: 1;
   padding: 20px;
-  background-color: #1e1e1e;
+  background-color: #1a1a1a;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -12,7 +12,7 @@
   overflow-y: auto;
   margin-bottom: 20px;
   scrollbar-width: thin;
-  scrollbar-color: #444 #1e1e1e;
+  scrollbar-color: #555555 #1a1a1a;
 }
 
 .chat-messages::-webkit-scrollbar {
@@ -20,11 +20,11 @@
 }
 
 .chat-messages::-webkit-scrollbar-track {
-  background: #1e1e1e;
+  background: #1a1a1a;
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-  background: #444;
+  background: #555555;
   border-radius: 4px;
 }
 
@@ -34,7 +34,7 @@
 }
 
 .message-user {
-  color: #00ff00;
+  color: #DC150B;
 }
 
 .message-assistant {
@@ -49,8 +49,8 @@
 .input-container {
   display: flex;
   align-items: center;
-  background-color: #1e1e1e;
-  border-top: 1px solid #333;
+  background-color: #1a1a1a;
+  border-top: 1px solid #555555;
   padding-top: 10px;
 }
 
@@ -66,13 +66,13 @@
 }
 
 .chat-input::placeholder {
-  color: #666;
+  color: #888888;
 }
 
 .signout-btn {
   background: transparent;
-  border: 1px solid #666;
-  color: #ff5f56;
+  border: 1px solid #555555;
+  color: #DC150B;
   font-family: inherit;
   font-size: 12px;
   padding: 4px 8px;
@@ -83,12 +83,12 @@
 }
 
 .signout-btn:hover {
-  border-color: #ff5f56;
-  background-color: rgba(255, 95, 86, 0.1);
+  border-color: #DC150B;
+  background-color: rgba(220, 21, 11, 0.1);
 }
 
 .signout-btn:active {
-  background-color: rgba(255, 95, 86, 0.2);
+  background-color: rgba(220, 21, 11, 0.2);
 }
 
 /* Session Management Styles */
@@ -98,12 +98,12 @@
   left: 0;
   width: 350px;
   height: 100vh;
-  background-color: #2d2d2d;
-  border-right: 1px solid #444;
+  background-color: #2a2a2a;
+  border-right: 1px solid #555555;
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-family: 'DM Sans', system-ui, sans-serif;
 }
 
 .sessions-header {
@@ -111,8 +111,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  border-bottom: 1px solid #444;
-  background-color: #333;
+  border-bottom: 1px solid #555555;
+  background-color: #333333;
 }
 
 .sessions-header h3 {
@@ -137,19 +137,19 @@
 }
 
 .close-btn:hover {
-  background-color: rgba(255, 95, 86, 0.1);
+  background-color: rgba(220, 21, 11, 0.1);
   border-radius: 50%;
 }
 
 .sessions-actions {
   padding: 15px 20px;
-  border-bottom: 1px solid #444;
+  border-bottom: 1px solid #555555;
 }
 
 .new-session-btn {
   background: transparent;
-  border: 1px solid #00ff00;
-  color: #00ff00;
+  border: 1px solid #DC150B;
+  color: #DC150B;
   font-family: inherit;
   font-size: 12px;
   padding: 8px 12px;
@@ -160,7 +160,7 @@
 }
 
 .new-session-btn:hover {
-  background-color: rgba(0, 255, 0, 0.1);
+  background-color: rgba(220, 21, 11, 0.1);
 }
 
 .sessions-list {
@@ -172,7 +172,7 @@
 .session-item {
   padding: 15px 20px;
   cursor: pointer;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid #3a3a3a;
   transition: background-color 0.2s ease;
 }
 
@@ -181,8 +181,8 @@
 }
 
 .session-item.active {
-  background-color: #444;
-  border-left: 3px solid #00ff00;
+  background-color: #3a3a3a;
+  border-left: 3px solid #DC150B;
 }
 
 .session-title {
@@ -195,14 +195,14 @@
 }
 
 .session-meta {
-  color: #888;
+  color: #888888;
   font-size: 11px;
 }
 
 .sessions-btn {
   background: transparent;
-  border: 1px solid #666;
-  color: #00ff00;
+  border: 1px solid #555555;
+  color: #cccccc;
   font-family: inherit;
   font-size: 12px;
   padding: 4px 8px;
@@ -213,10 +213,10 @@
 }
 
 .sessions-btn:hover {
-  border-color: #00ff00;
-  background-color: rgba(0, 255, 0, 0.1);
+  border-color: #DC150B;
+  background-color: rgba(220, 21, 11, 0.1);
 }
 
 .sessions-btn:active {
-  background-color: rgba(0, 255, 0, 0.2);
+  background-color: rgba(220, 21, 11, 0.2);
 }
