@@ -36,7 +36,7 @@ class MemoryResponse(BaseModel):
 class MemorySearchRequest(BaseModel):
     query: str = Field(..., min_length=1, description="Search query for memories")
     user_id: str = Field(..., min_length=1, description="User identifier for memory isolation")
-    limit: int = Field(default=5, ge=1, le=20, description="Maximum number of memories to return")
+    limit: int = Field(default=10, ge=1, le=50, description="Maximum number of memories to return")
 
 class MemorySearchResponse(BaseModel):
     memories: List[str] = Field(..., description="List of relevant memories")

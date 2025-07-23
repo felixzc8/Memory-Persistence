@@ -1,12 +1,11 @@
 from openai import OpenAI
-from typing import List, Dict, Tuple, AsyncGenerator
+from typing import AsyncGenerator
 from app.core.config import settings
 from app.services.memory_service import memory_service
-# Using memory_service.memory.session_manager instead of direct import
-from app.schemas.chat import ChatMessage, ChatResponse
+from app.schemas.chat import ChatResponse
 from TiMemory.prompts import create_chat_system_prompt
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 logger = logging.getLogger(__name__)
@@ -40,15 +39,18 @@ class ChatService:
             SSE-formatted strings with streaming response chunks
         """
         try:
-            if not session_id:
-                title = memory_service.memory.session_manager.generate_session_title(message)
-                session_response = memory_service.memory.session_manager.create_session(user_id, title)
-                session_id = session_response.session_id
-                logger.info(f"Created new session {session_id} for user {user_id}")
-                
+            original_session_id = session_id
+            session_id = memory_service.memory.session_manager.get_or_create_session(
+                user_id=user_id, 
+                session_id=session_id, 
+                first_message=message
+            )
+            
+            if not original_session_id:
+                session = memory_service.memory.session_manager.get_session(session_id)
+                title = session.title if session else "New conversation"
                 yield f"event: session_created\ndata: {json.dumps({'session_id': session_id, 'title': title})}\n\n"
             
-            # Get context with summary if needed
             summary, session_context = memory_service.memory.session_manager.get_session_context_with_summary(
                 session_id, 
                 memory_service.memory.message_limit
@@ -57,13 +59,13 @@ class ChatService:
             memories_context = memory_service.get_memory_context(
                 query=message, 
                 user_id=user_id, 
-                limit=5
+                limit=settings.memory_search_limit
             )
             
             memories = memory_service.search_memories(
                 query=message, 
                 user_id=user_id, 
-                limit=5
+                limit=settings.memory_search_limit
             )
             memories_used = [mem.content for mem in memories]
             
@@ -72,7 +74,6 @@ class ChatService:
             system_prompt = create_chat_system_prompt(memories_context)
             
             messages = [{"role": "system", "content": system_prompt}]
-            # Add conversation summary if available
             if summary:
                 messages.append({"role": "system", "content": f"Previous conversation summary: {summary}"})
             messages.extend(session_context)
@@ -106,7 +107,7 @@ class ChatService:
             completion_data = {
                 'session_id': session_id,
                 'memories_used': memories_used,
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             }
             yield f"event: complete\ndata: {json.dumps(completion_data)}\n\n"
             
@@ -133,13 +134,12 @@ class ChatService:
             ChatResponse with assistant's response and metadata
         """
         try:
-            if not session_id:
-                title = memory_service.memory.session_manager.generate_session_title(message)
-                session_response = memory_service.memory.session_manager.create_session(user_id, title)
-                session_id = session_response.session_id
-                logger.info(f"Created new session {session_id} for user {user_id}")
+            session_id = memory_service.memory.session_manager.get_or_create_session(
+                user_id=user_id, 
+                session_id=session_id, 
+                first_message=message
+            )
             
-            # Get context with summary if needed
             summary, session_context = memory_service.memory.session_manager.get_session_context_with_summary(
                 session_id, 
                 memory_service.memory.message_limit
@@ -148,13 +148,13 @@ class ChatService:
             memories_context = memory_service.get_memory_context(
                 query=message, 
                 user_id=user_id, 
-                limit=5
+                limit=settings.memory_search_limit
             )
             
             memories = memory_service.search_memories(
                 query=message, 
                 user_id=user_id, 
-                limit=5
+                limit=settings.memory_search_limit
             )
             memories_used = [mem.content for mem in memories]
             
@@ -189,7 +189,7 @@ class ChatService:
                 user_id=user_id,
                 session_id=session_id,
                 memories_used=memories_used,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
             
         except Exception as e:
@@ -235,5 +235,4 @@ class ChatService:
             return "Unable to generate conversation summary."
         
 
-
-chat_service = ChatService() 
+chat_service = ChatService()

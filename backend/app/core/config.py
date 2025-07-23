@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     tidb_ssl_ca: Optional[str] = ssl.get_default_verify_paths().cafile
     embedding_model_dims: int = 1536
     memory_collection_name: str = "memories"
+    memory_search_limit: int = 10
+    message_limit: int = 20
+    summary_threshold: int = 10
     
     @property
     def tidb_connection_string(self) -> str:
