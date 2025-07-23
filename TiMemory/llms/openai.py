@@ -8,7 +8,7 @@ class OpenAILLM:
         self.model = config.model_choice
         self.client = OpenAI(api_key=config.openai_api_key)
 
-    def generate_parsed_response(self, instructions: str, input, text_format: str = None):
+    def generate_parsed_response(self, instructions: str, input: List, text_format: str = None):
         response = self.client.responses.parse(
             model=self.model,
             instructions=instructions,

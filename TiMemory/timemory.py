@@ -5,7 +5,7 @@ from .tidb_vector import TiDBVector
 from .session_manager import SessionManager
 from . import database
 from typing import List, Dict
-from .schemas.memory import MemoryResponse, Memory
+from .schemas.memory import MemoryResponse, Memory, MemoryExtractionResponse, MemoryConsolidationResponse, MemoryConsolidationItem, MemoryAttributes
 from .config.base import MemoryConfig
 
 from uuid import uuid4
@@ -20,14 +20,12 @@ class TiMemory:
         self.message_limit = message_limit
         self.summary_threshold = summary_threshold
 
-        # Initialize TiMemory's own database connection
         database.initialize_database(config)
         database.create_tables()
         
         self.embedder = OpenAIEmbeddingModel(config)
         self.llm = OpenAILLM(config)
         
-        # Use TiMemory's own database for vector storage
         from .models.memory import Memory as MemoryModel
         self.tidbvector = TiDBVector(
             db_session_factory=database.SessionLocal,
@@ -36,7 +34,6 @@ class TiMemory:
         )
         self.tidbvector.create_table()
         
-        # Use TiMemory's own database for session management  
         self.session_manager = SessionManager(
             db_session_factory=database.SessionLocal
         )
@@ -49,22 +46,7 @@ class TiMemory:
         Extract memories, consolidate with existing ones, update TiDB, and handle summary generation.
         """
         self.logger.info(f"Starting process_messages for user {user_id}")
-        new_memories_response = self._extract_memories(messages)
-        self.logger.info(f"Extracted {len(new_memories_response.memories)} memories: {new_memories_response.memories}")
         
-        if not new_memories_response or not new_memories_response.memories:
-            self.logger.info("No memories extracted, but checking for summary generation")
-        else:
-            existing_memories = self._find_similar_memories(new_memories_response.memories, user_id)
-            if len(existing_memories.memories) == 0:
-                self.logger.info("No similar existing memories found, storing new memories directly")
-                self._store_memories(new_memories_response.memories, user_id)
-            else:
-                consolidated_response = self._consolidate_memories(existing_memories, new_memories_response.memories)
-                self.logger.info(f"Storing {len(consolidated_response.memories)} consolidated memories: {consolidated_response.memories}")
-                self._store_memories(consolidated_response.memories, user_id)
-        
-        # Handle conversation summary generation if session_id provided
         if session_id and self.session_manager.should_generate_summary(
             session_id, 
             self.message_limit, 
@@ -75,7 +57,41 @@ class TiMemory:
             new_summary = await self.generate_conversation_summary(session_id, current_summary)
             current_count = self.session_manager.get_message_count(session_id)
             self.session_manager.update_session_summary(session_id, new_summary, current_count)
-
+        
+        
+        extraction_response = self._extract_memories(messages)
+        self.logger.info(f"Extracted {len(extraction_response.memories)} memories: {extraction_response.memories}")
+        
+        if not extraction_response or not extraction_response.memories:
+            self.logger.info("No memories extracted, returning without storing")
+            return
+        
+        consolidation_items = []
+        for item in extraction_response.memories:
+            consolidation_item = MemoryConsolidationItem(
+                id=str(uuid4()),
+                content=item.content,
+                memory_attributes=MemoryAttributes(
+                    type=item.memory_attributes.type,
+                    status="active"
+                )
+            )
+            consolidation_items.append(consolidation_item)
+        
+        new_memories_response = MemoryConsolidationResponse(memories=consolidation_items)
+        
+        existing_memories = self._find_similar_memories(new_memories_response, user_id)
+        if len(existing_memories.memories) == 0:
+            self.logger.info("No similar existing memories found, storing new memories directly")
+            # Convert consolidation items to Memory objects for storage
+            memory_objects = [Memory(id=item.id, user_id=user_id, content=item.content, memory_attributes=item.memory_attributes) for item in new_memories_response.memories]
+            self._store_memories(memory_objects, user_id)
+        else:
+            consolidated_response = self._consolidate_memories(existing_memories, new_memories_response)
+            self.logger.info(f"Storing {len(consolidated_response.memories)} consolidated memories: {consolidated_response.memories}")
+            # Convert consolidation items to Memory objects for storage
+            memory_objects = [Memory(id=item.id, user_id=user_id, content=item.content, memory_attributes=item.memory_attributes) for item in consolidated_response.memories]
+            self._store_memories(memory_objects, user_id)
     
     
     def search(self, query: str, user_id: str, limit: int = 10) -> Dict:
@@ -94,32 +110,30 @@ class TiMemory:
         """
         self.tidbvector.delete_all(user_id=user_id)
         
-    def _extract_memories(self, messages: List[Dict[str, str]]) -> MemoryResponse:
+    def _extract_memories(self, messages: List[Dict[str, str]]) -> MemoryExtractionResponse:
         """
         Extract memories from a list of messages using the fact extraction prompt.
         """
         self.logger.info(f"Extracting memories from messages: {messages}")
         try:
-            response = self.llm.generate_parsed_response(
+            extraction_response = self.llm.generate_parsed_response(
                 instructions=self.fact_extraction_prompt,
                 input=messages,
-                text_format=MemoryResponse
+                text_format=MemoryExtractionResponse
             ).output_parsed
-            self.logger.info(f"extract memory response: {response}")
-            for memory in response.memories:
-                memory.id = str(uuid4())
-                memory.memory_attributes.status = 'active'
-            return response
+            self.logger.info(f"extract memory response: {extraction_response}")
+            
+            return extraction_response
         except Exception as e:
             self.logger.error(f"Error in _extract_memories: {e}")
             raise
         
-    def _consolidate_memories(self, existing_memories: MemoryResponse, new_memories: List[Memory]) -> MemoryResponse:
+    def _consolidate_memories(self, existing_memories: MemoryConsolidationResponse, new_memories: MemoryConsolidationResponse) -> MemoryConsolidationResponse:
         """
         Resolve new memories against existing ones using the fact update memory prompt.
         """
         existing_memories_str = "\n".join([f"EXISTING: {memory.model_dump()}" for memory in existing_memories.memories])
-        new_memories_str = "\n".join([f"NEW: {memory.model_dump()}" for memory in new_memories])
+        new_memories_str = "\n".join([f"NEW: {memory.model_dump()}" for memory in new_memories.memories])
         input_data = f"{existing_memories_str}\n{new_memories_str}"
         
         self.logger.info(f"Consolidating memories: {input_data}")
@@ -127,28 +141,33 @@ class TiMemory:
         response = self.llm.generate_parsed_response(
             instructions=self.memory_consolidation_prompt,
             input=input_data,
-            text_format=MemoryResponse
+            text_format=MemoryConsolidationResponse
         ).output_parsed
         self.logger.info(f"Consolidation response: {response}")
         return response
 
-    def _find_similar_memories(self, new_memories: List[Memory], user_id: str) -> MemoryResponse:
+    def _find_similar_memories(self, new_memories: MemoryConsolidationResponse, user_id: str) -> MemoryConsolidationResponse:
         """
         Find similar memories for each new memory to support consolidation.
         """
         existing_memories = []
         seen_ids = set()
         
-        for memory in new_memories:
+        for memory in new_memories.memories:
             embedding = self.embedder.embed(memory.content)
             similar_memories = self.tidbvector.search(embedding, user_id, limit=10)
             for mem in similar_memories.memories:
                 if mem.id not in seen_ids:
-                    existing_memories.append(mem)
+                    consolidation_item = MemoryConsolidationItem(
+                        id=mem.id,
+                        content=mem.content,
+                        memory_attributes=mem.memory_attributes
+                    )
+                    existing_memories.append(consolidation_item)
                     seen_ids.add(mem.id)
             self.logger.info(f"Memory {memory.id} found {len(similar_memories.memories)} similar memories: {similar_memories.memories}")
         
-        return MemoryResponse(memories=existing_memories)
+        return MemoryConsolidationResponse(memories=existing_memories)
 
     def _store_memories(self, consolidated_memories: List[Memory], user_id: str):
         """
