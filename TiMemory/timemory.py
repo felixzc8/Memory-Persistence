@@ -12,13 +12,13 @@ from uuid import uuid4
 import logging
 
 class TiMemory:
-    def __init__(self, config: MemoryConfig, message_limit: int = 20, summary_threshold: int = 10):
+    def __init__(self, config: MemoryConfig):
         self.fact_extraction_prompt = FACT_EXTRACTION_PROMPT
         self.memory_consolidation_prompt = MEMORY_CONSOLIDATION_PROMPT
         self.conversation_summary_prompt = CONVERSATION_SUMMARY_PROMPT
         self.config = config
-        self.message_limit = message_limit
-        self.summary_threshold = summary_threshold
+        self.message_limit = config.message_limit
+        self.summary_threshold = config.summary_threshold
 
         database.initialize_database(config)
         database.create_tables()
@@ -56,7 +56,12 @@ class TiMemory:
             current_summary = self.session_manager.get_session_summary(session_id)
             new_summary = await self.generate_conversation_summary(session_id, current_summary)
             current_count = self.session_manager.get_message_count(session_id)
-            self.session_manager.update_session_summary(session_id, new_summary, current_count)
+            
+            # Generate embedding for the summary
+            summary_embedding = self.embedder.embed(new_summary)
+            
+            # Create new summary record
+            self.session_manager.create_summary(session_id, new_summary, summary_embedding, current_count)
         
         
         extraction_response = self._extract_memories(messages)
@@ -83,13 +88,11 @@ class TiMemory:
         existing_memories = self._find_similar_memories(new_memories_response, user_id)
         if len(existing_memories.memories) == 0:
             self.logger.info("No similar existing memories found, storing new memories directly")
-            # Convert consolidation items to Memory objects for storage
             memory_objects = [Memory(id=item.id, user_id=user_id, content=item.content, memory_attributes=item.memory_attributes) for item in new_memories_response.memories]
             self._store_memories(memory_objects, user_id)
         else:
             consolidated_response = self._consolidate_memories(existing_memories, new_memories_response)
             self.logger.info(f"Storing {len(consolidated_response.memories)} consolidated memories: {consolidated_response.memories}")
-            # Convert consolidation items to Memory objects for storage
             memory_objects = [Memory(id=item.id, user_id=user_id, content=item.content, memory_attributes=item.memory_attributes) for item in consolidated_response.memories]
             self._store_memories(memory_objects, user_id)
     
@@ -132,9 +135,9 @@ class TiMemory:
         """
         Resolve new memories against existing ones using the fact update memory prompt.
         """
-        existing_memories_str = "\n".join([f"EXISTING: {memory.model_dump()}" for memory in existing_memories.memories])
-        new_memories_str = "\n".join([f"NEW: {memory.model_dump()}" for memory in new_memories.memories])
-        input_data = f"{existing_memories_str}\n{new_memories_str}"
+        existing_memories_str = "\n".join([memory.model_dump_json() for memory in existing_memories.memories])
+        new_memories_str = "\n".join([memory.model_dump_json() for memory in new_memories.memories])
+        input_data = f"EXISTING:\n{existing_memories_str}\nNEW:\n{new_memories_str}"
         
         self.logger.info(f"Consolidating memories: {input_data}")
         
@@ -155,7 +158,7 @@ class TiMemory:
         
         for memory in new_memories.memories:
             embedding = self.embedder.embed(memory.content)
-            similar_memories = self.tidbvector.search(embedding, user_id, limit=10)
+            similar_memories = self.tidbvector.search(embedding, user_id, limit=self.config.memory_search_limit)
             for mem in similar_memories.memories:
                 if mem.id not in seen_ids:
                     consolidation_item = MemoryConsolidationItem(

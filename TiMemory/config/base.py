@@ -58,3 +58,13 @@ class MemoryConfig(ABC):
     @abstractmethod
     def tidb_connection_string(self) -> str:
         pass
+    
+    @property
+    @abstractmethod
+    def message_limit(self) -> int:
+        pass
+    
+    @property
+    @abstractmethod
+    def summary_threshold(self) -> int:
+        pass

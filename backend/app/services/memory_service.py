@@ -28,9 +28,7 @@ class MemoryService:
     async def add_memory(self, messages: List[Dict[str, str]], user_id: str, session_id: str = None) -> bool:
         """Add conversation to memory"""
         try:
-            logger.info(f"Memory service add_memory called for user {user_id}")
             await self.memory.process_messages(messages, user_id=user_id, session_id=session_id)
-            logger.info(f"Added memory for user {user_id}")
             return True
         except Exception as e:
             logger.error(f"Error adding memory for user {user_id}: {e}")
@@ -42,8 +40,16 @@ class MemoryService:
         if not memories:
             return "No relevant memories found."
 
-        memories_str = "\n".join(f"- {memory.content}" for memory in memories)
-        return f"User memories:\n{memories_str}"
+        formatted_memories = []
+        for memory in memories:
+            updated_date = memory.updated_at.strftime("%Y-%m-%d %H:%M")
+            status = memory.memory_attributes.get('status')
+            
+            memory_entry = f"• **Memory ({status})** - Updated: {updated_date}\n  {memory.content}"
+            formatted_memories.append(memory_entry)
+
+        memories_str = "\n\n".join(formatted_memories)
+        return memories_str
 
     def delete_memories(self, user_id: str) -> bool:
         """Delete all memories for a user"""

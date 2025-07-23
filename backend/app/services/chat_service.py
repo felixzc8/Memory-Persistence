@@ -1,12 +1,11 @@
 from openai import OpenAI
-from typing import List, Dict, Tuple, AsyncGenerator
+from typing import AsyncGenerator
 from app.core.config import settings
 from app.services.memory_service import memory_service
-# Using memory_service.memory.session_manager instead of direct import
-from app.schemas.chat import ChatMessage, ChatResponse
-from TiMemory.prompts import create_chat_system_prompt
+from app.schemas.chat import ChatResponse
+from TiMemory.prompts import SYSTEM_PROMPT
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 logger = logging.getLogger(__name__)
@@ -40,61 +39,44 @@ class ChatService:
             SSE-formatted strings with streaming response chunks
         """
         try:
-            if not session_id:
-                title = memory_service.memory.session_manager.generate_session_title(message)
-                session_response = memory_service.memory.session_manager.create_session(user_id, title)
-                session_id = session_response.session_id
-                logger.info(f"Created new session {session_id} for user {user_id}")
-                
-                yield f"event: session_created\ndata: {json.dumps({'session_id': session_id, 'title': title})}\n\n"
-            
-            # Get context with summary if needed
             summary, session_context = memory_service.memory.session_manager.get_session_context_with_summary(
                 session_id, 
                 memory_service.memory.message_limit
             )
-            
+
             memories_context = memory_service.get_memory_context(
                 query=message, 
                 user_id=user_id, 
-                limit=5
+                limit=settings.memory_search_limit
             )
             
-            memories = memory_service.search_memories(
-                query=message, 
-                user_id=user_id, 
-                limit=5
-            )
-            memories_used = [mem.content for mem in memories]
+            instructions = SYSTEM_PROMPT + f"\n MEMORIES: {memories_context}"
+            instructions += f"\n SUMMARY: {summary}"
+            instructions += f"\n SESSION CONTEXT: {session_context}"
+            user_message = [{"role": "user", "content": message}]
             
-            yield f"event: memories_loaded\ndata: {json.dumps({'count': len(memories_used)})}\n\n"
-            
-            system_prompt = create_chat_system_prompt(memories_context)
-            
-            messages = [{"role": "system", "content": system_prompt}]
-            # Add conversation summary if available
-            if summary:
-                messages.append({"role": "system", "content": f"Previous conversation summary: {summary}"})
-            messages.extend(session_context)
-            messages.append({"role": "user", "content": message})
-            
-            memory_service.memory.session_manager.add_message_to_session(session_id, "user", message)
-            full_response = ""
-            
-            stream = self.client.chat.completions.create(
+            stream = self.client.responses.create(
                 model=settings.model_choice,
-                messages=messages,
-                temperature=0.7,
-                max_tokens=1000,
+                instructions=instructions,
+                input=user_message,
                 stream=True
             )
             
-            for chunk in stream:
-                if chunk.choices[0].delta.content is not None:
-                    content = chunk.choices[0].delta.content
+            full_response = ""
+            
+            for event in stream:
+                if event.type == "response.output_text.delta":
+                    content = event.delta
                     full_response += content
                     yield f"event: content\ndata: {json.dumps({'content': content})}\n\n"
+                elif event.type == "response.completed":
+                    pass
+                elif event.type == "error":
+                    logger.error(f"Streaming error: {event}")
+                    yield f"event: error\ndata: {json.dumps({'error': str(event)})}\n\n"
             
+            
+            memory_service.memory.session_manager.add_message_to_session(session_id, "user", message)
             memory_service.memory.session_manager.add_message_to_session(session_id, "assistant", full_response)
             conversation_messages = [
                 {"role": "user", "content": message},
@@ -102,13 +84,6 @@ class ChatService:
             ]
             
             await memory_service.add_memory(conversation_messages, user_id, session_id)
-            
-            completion_data = {
-                'session_id': session_id,
-                'memories_used': memories_used,
-                'timestamp': datetime.utcnow().isoformat()
-            }
-            yield f"event: complete\ndata: {json.dumps(completion_data)}\n\n"
             
         except Exception as e:
             logger.error(f"Error in chat_with_memory_stream for user {user_id}: {e}")
@@ -133,13 +108,7 @@ class ChatService:
             ChatResponse with assistant's response and metadata
         """
         try:
-            if not session_id:
-                title = memory_service.memory.session_manager.generate_session_title(message)
-                session_response = memory_service.memory.session_manager.create_session(user_id, title)
-                session_id = session_response.session_id
-                logger.info(f"Created new session {session_id} for user {user_id}")
             
-            # Get context with summary if needed
             summary, session_context = memory_service.memory.session_manager.get_session_context_with_summary(
                 session_id, 
                 memory_service.memory.message_limit
@@ -148,29 +117,25 @@ class ChatService:
             memories_context = memory_service.get_memory_context(
                 query=message, 
                 user_id=user_id, 
-                limit=5
+                limit=settings.memory_search_limit
             )
-            
+
             memories = memory_service.search_memories(
                 query=message, 
                 user_id=user_id, 
-                limit=5
+                limit=settings.memory_search_limit
             )
             memories_used = [mem.content for mem in memories]
             
-            system_prompt = create_chat_system_prompt(memories_context)
+            instructions = SYSTEM_PROMPT + f"\n MEMORIES: {memories_context}"
+            instructions += f"\n SUMMARY: {summary}"
+            instructions += f"\n SESSION CONTEXT: {session_context}"
+            user_message = [{"role": "user", "content": message}]
             
-            messages = [{"role": "system", "content": system_prompt}]
-            # Add conversation summary if available
-            if summary:
-                messages.append({"role": "system", "content": f"Previous conversation summary: {summary}"})
-            messages.extend(session_context)
-            messages.append({"role": "user", "content": message})
-            response = self.client.chat.completions.create(
+            response = self.client.responses.create(
                 model=settings.model_choice,
-                messages=messages,
-                temperature=0.7,
-                max_tokens=1000
+                instructions=instructions,
+                messages=user_message
             )
             
             assistant_response = response.choices[0].message.content
@@ -189,51 +154,11 @@ class ChatService:
                 user_id=user_id,
                 session_id=session_id,
                 memories_used=memories_used,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
             
         except Exception as e:
             logger.error(f"Error in chat_with_memory for user {user_id}: {e}")
             raise
-    
 
-    async def get_conversation_summary(self, user_id: str, limit: int = 10) -> str:
-        """Get a summary of recent conversations for a user"""
-        try:
-            memories = memory_service.search_memories(
-                query="conversation summary",
-                user_id=user_id,
-                limit=limit
-            )
-            
-            if not memories:
-                return "No conversation history found."
-            
-            memories_text = "\n".join([mem['memory'] for mem in memories])
-            
-            messages = [
-                {
-                    "role": "system", 
-                    "content": "Summarize the following conversation history in a concise and helpful way:"
-                },
-                {
-                    "role": "user", 
-                    "content": memories_text
-                }
-            ]
-            
-            response = self.client.chat.completions.create(
-                model=settings.model_choice,
-                messages=messages,
-                temperature=0.3
-            )
-            
-            return response.choices[0].message.content
-            
-        except Exception as e:
-            logger.error(f"Error getting conversation summary for user {user_id}: {e}")
-            return "Unable to generate conversation summary."
-        
-
-
-chat_service = ChatService() 
+chat_service = ChatService()
