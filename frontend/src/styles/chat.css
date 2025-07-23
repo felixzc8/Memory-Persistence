@@ -264,3 +264,47 @@
 .sessions-btn:active {
   background-color: rgba(220, 21, 11, 0.2);
 }
+
+.api-log-btn {
+  background: transparent;
+  border: 1px solid #555555;
+  color: #cccccc;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 4px 8px;
+  margin-left: 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.api-log-btn:hover {
+  border-color: #00aaff;
+  background-color: rgba(0, 170, 255, 0.1);
+}
+
+.api-log-btn:active {
+  background-color: rgba(0, 170, 255, 0.2);
+}
+
+/* Adjust terminal layout when API panel is open */
+.terminal.with-api-panel {
+  position: relative;
+}
+
+.terminal.with-api-panel .terminal-body {
+  margin-right: 50%;
+}
+
+@media (max-width: 1024px) {
+  .terminal.with-api-panel .terminal-body {
+    margin-right: 70%;
+  }
+}
+
+@media (max-width: 768px) {
+  .terminal.with-api-panel .terminal-body {
+    margin-right: 0;
+    margin-bottom: 60vh;
+  }
+}
