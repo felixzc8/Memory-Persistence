@@ -3,14 +3,32 @@ from typing import List, Optional
 from datetime import datetime, timezone
 
 class MemoryAttributes(BaseModel):
-    type: Optional[str] = None
-    status: Optional[str] = None
+    type: str
+    status: str
 
+class ExtractionMemoryAttributes(BaseModel):
+    type: str
+    
 class Memory(BaseModel):
     id: str
     user_id: str
     content: str
-    memory_attributes: Optional[MemoryAttributes] = None
+    memory_attributes: MemoryAttributes
+
+class MemoryExtractionItem(BaseModel):
+    content: str
+    memory_attributes: ExtractionMemoryAttributes
+
+class MemoryExtractionResponse(BaseModel):
+    memories: List[MemoryExtractionItem]
+
+class MemoryConsolidationItem(BaseModel):
+    id: str
+    content: str
+    memory_attributes: MemoryAttributes
+
+class MemoryConsolidationResponse(BaseModel):
+    memories: List[MemoryConsolidationItem]
     
 class MemoryResponse(BaseModel):
     memories: List[Memory]
