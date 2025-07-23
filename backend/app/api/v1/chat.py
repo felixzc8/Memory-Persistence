@@ -10,7 +10,6 @@ from TiMemory.schemas.session import (
 from app.services.chat_service import chat_service
 from app.services.memory_service import memory_service
 from app.dependencies.memory import get_available_memory_service
-# Using memory_service.memory.session_manager instead
 from app.services.user_service import user_service
 from app.dependencies.auth import get_authenticated_user
 from app.dependencies.session import get_user_session
@@ -29,14 +28,17 @@ async def new_chat_session(user_id: str, request: ChatRequest, req: Request):
     await validate_chat_request(user_id, request)
     await get_authenticated_user(user_id)
     
+    title = memory_service.memory.session_manager.generate_session_title(request.message)
+    session_response = memory_service.memory.session_manager.create_session(user_id, title)
+    session_id = session_response.session_id
+    
     accept_header = req.headers.get("accept", "application/json")
     
     if "text/event-stream" in accept_header:
-        # Return streaming response
         stream_generator = chat_service.chat_with_memory_stream(
             message=request.message,
             user_id=user_id,
-            session_id=None
+            session_id=session_id
         )
         
         return StreamingResponse(
@@ -49,13 +51,12 @@ async def new_chat_session(user_id: str, request: ChatRequest, req: Request):
                 "Access-Control-Allow-Headers": "Cache-Control"
             }
         )
-    else:
-        # Return regular JSON response
-        return await chat_service.chat_with_memory(
-            message=request.message,
-            user_id=user_id,
-            session_id=None
-        )
+        
+    return await chat_service.chat_with_memory(
+        message=request.message,
+        user_id=user_id,
+        session_id=session_id
+    )
 
 @router.post("/{user_id}/{session_id}")
 async def continue_chat_session(user_id: str, session_id: str, request: ChatRequest, req: Request):
@@ -70,7 +71,6 @@ async def continue_chat_session(user_id: str, session_id: str, request: ChatRequ
     accept_header = req.headers.get("accept", "application/json")
     
     if "text/event-stream" in accept_header:
-        # Return streaming response
         stream_generator = chat_service.chat_with_memory_stream(
             message=request.message,
             user_id=user_id,
@@ -87,13 +87,12 @@ async def continue_chat_session(user_id: str, session_id: str, request: ChatRequ
                 "Access-Control-Allow-Headers": "Cache-Control"
             }
         )
-    else:
-        # Return regular JSON response
-        return await chat_service.chat_with_memory(
-            message=request.message,
-            user_id=user_id,
-            session_id=session_id
-        )
+        
+    return await chat_service.chat_with_memory(
+        message=request.message,
+        user_id=user_id,
+        session_id=session_id
+    )
 
 @router.get("/{user_id}/sessions", response_model=SessionListResponse)
 async def get_user_sessions(user_id: str):

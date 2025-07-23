@@ -3,8 +3,8 @@ from typing import List, Optional
 from datetime import datetime, timezone
 
 class MemoryAttributes(BaseModel):
-    type: str
-    status: str
+    type: Optional[str] = None
+    status: Optional[str] = None
 
 class ExtractionMemoryAttributes(BaseModel):
     type: str
@@ -14,6 +14,8 @@ class Memory(BaseModel):
     user_id: str
     content: str
     memory_attributes: MemoryAttributes
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
 class MemoryExtractionItem(BaseModel):
     content: str

@@ -40,8 +40,16 @@ class MemoryService:
         if not memories:
             return "No relevant memories found."
 
-        memories_str = "\n".join(f"- {memory.content}" for memory in memories)
-        return f"User memories:\n{memories_str}"
+        formatted_memories = []
+        for memory in memories:
+            updated_date = memory.updated_at.strftime("%Y-%m-%d %H:%M")
+            status = memory.memory_attributes.get('status')
+            
+            memory_entry = f"• **Memory ({status})** - Updated: {updated_date}\n  {memory.content}"
+            formatted_memories.append(memory_entry)
+
+        memories_str = "\n\n".join(formatted_memories)
+        return memories_str
 
     def delete_memories(self, user_id: str) -> bool:
         """Delete all memories for a user"""

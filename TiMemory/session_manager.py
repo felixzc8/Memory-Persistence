@@ -308,28 +308,6 @@ class SessionManager:
             messages_since_last_summary = current_count - latest_summary.message_count_at_creation
             return messages_since_last_summary >= summary_threshold
 
-    def get_or_create_session(self, user_id: str, session_id: str = None, first_message: str = None) -> str:
-        """
-        Get existing session or create a new one.
-        
-        Args:
-            user_id: User identifier
-            session_id: Optional existing session ID
-            first_message: Optional first message for title generation when creating new session
-            
-        Returns:
-            session_id: The session ID (existing or newly created)
-        """
-        if session_id:
-            existing_session = self.get_session(session_id)
-            if existing_session:
-                return session_id
-            else:
-                logger.warning(f"Session {session_id} not found, creating new session")
-        
-        title = self.generate_session_title(first_message or "New conversation")
-        session_response = self.create_session(user_id, title)
-        return session_response.session_id
 
 
 session_manager = SessionManager()
