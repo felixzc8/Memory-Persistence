@@ -54,18 +54,15 @@ function Chat({ username, userId, onSignout }) {
   }, [isLoading, isStreaming]);
 
   useEffect(() => {
+    let isCancelled = false;
+    
     const initializeUser = async () => {
+      if (isCancelled) return;
+      
       try {
         const response = await loggedFetch(`/api/v1/chat/${userId}/sessions`);
-        if (response.ok) {
-          const data = await response.json();
-          setSessions(data.sessions);
-          
-          if (data.sessions.length > 0) {
-            const mostRecent = data.sessions[0];
-            setCurrentSessionId(mostRecent.session_id);
-            await loadSessionMessages(mostRecent.session_id);
-          } else {
+        if (isCancelled || !response.ok) {
+          if (!response.ok) {
             setMessages([
               {
                 type: 'system',
@@ -79,6 +76,18 @@ function Chat({ username, userId, onSignout }) {
               }
             ]);
           }
+          return;
+        }
+        
+        const data = await response.json();
+        if (isCancelled) return;
+        
+        setSessions(data.sessions);
+        
+        if (data.sessions.length > 0) {
+          const mostRecent = data.sessions[0];
+          setCurrentSessionId(mostRecent.session_id);
+          await loadSessionMessages(mostRecent.session_id);
         } else {
           setMessages([
             {
@@ -94,6 +103,8 @@ function Chat({ username, userId, onSignout }) {
           ]);
         }
       } catch (error) {
+        if (isCancelled) return;
+        
         console.error('Error loading sessions:', error);
         setMessages([
           {
@@ -110,12 +121,18 @@ function Chat({ username, userId, onSignout }) {
       }
     };
     
-    initializeUser();
+    if (username && userId) {
+      initializeUser();
+    }
     
     if (inputRef.current) {
       inputRef.current.focus();
     }
-  }, [username]);
+    
+    return () => {
+      isCancelled = true;
+    };
+  }, [username, userId, loggedFetch]);
 
   const loadUserSessions = async () => {
     try {
