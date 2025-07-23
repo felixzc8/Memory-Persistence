@@ -24,7 +24,7 @@
 
 .api-log-title {
   font-weight: bold;
-  color: #00ff00;
+  color: #DC150B;
 }
 
 .api-log-controls {
@@ -45,7 +45,7 @@
 
 .filter-select:focus {
   outline: none;
-  border-color: #00ff00;
+  border-color: #DC150B;
 }
 
 .clear-btn, .close-btn {
@@ -64,8 +64,8 @@
 }
 
 .close-btn {
-  background-color: #dc3545;
-  border-color: #dc3545;
+  background-color: #DC150B;
+  border-color: #DC150B;
   color: white;
   font-weight: bold;
   width: 24px;
@@ -77,7 +77,7 @@
 }
 
 .close-btn:hover {
-  background-color: #c82333;
+  background-color: #87120C;
 }
 
 .api-log-content {
@@ -129,13 +129,13 @@
 }
 
 .log-method {
-  color: #ffa500;
+  color: #F35048;
   font-weight: bold;
   min-width: 40px;
 }
 
 .log-url {
-  color: #87ceeb;
+  color: #C76FF2;
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -180,7 +180,7 @@
 }
 
 .log-method-url {
-  color: #87ceeb;
+  color: #C76FF2;
   font-weight: bold;
   flex: 1;
 }
@@ -198,7 +198,7 @@
 }
 
 .log-section h4 {
-  color: #00ff00;
+  color: #DC150B;
   margin: 0 0 8px 0;
   font-size: 13px;
 }

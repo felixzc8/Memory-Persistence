@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Login from '../components/Login';
 import Chat from '../components/Chat';
+import { ApiLogProvider } from '../contexts/ApiLogContext';
 
 function AppRouter() {
   const [userId, setUserId] = useState('');
@@ -43,11 +44,13 @@ function AppRouter() {
   }
 
   return (
-    <Chat 
-      username={username}
-      userId={userId}
-      onSignout={handleSignout}
-    />
+    <ApiLogProvider>
+      <Chat 
+        username={username}
+        userId={userId}
+        onSignout={handleSignout}
+      />
+    </ApiLogProvider>
   );
 }
 

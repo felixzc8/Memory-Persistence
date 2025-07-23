@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { marked } from 'marked';
+import { useApiLog } from '../contexts/ApiLogContext';
+import ApiLogPanel from './ApiLogPanel';
 import '../styles/chat.css';
 
 function Chat({ username, userId, onSignout }) {
@@ -13,6 +15,7 @@ function Chat({ username, userId, onSignout }) {
   const [showSessions, setShowSessions] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const { loggedFetch, isPanelOpen, togglePanel } = useApiLog();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -53,7 +56,7 @@ function Chat({ username, userId, onSignout }) {
   useEffect(() => {
     const initializeUser = async () => {
       try {
-        const response = await fetch(`/api/v1/chat/${userId}/sessions`);
+        const response = await loggedFetch(`/api/v1/chat/${userId}/sessions`);
         if (response.ok) {
           const data = await response.json();
           setSessions(data.sessions);
@@ -116,7 +119,7 @@ function Chat({ username, userId, onSignout }) {
 
   const loadUserSessions = async () => {
     try {
-      const response = await fetch(`/api/v1/chat/${userId}/sessions`);
+      const response = await loggedFetch(`/api/v1/chat/${userId}/sessions`);
       if (response.ok) {
         const data = await response.json();
         setSessions(data.sessions);
@@ -128,7 +131,7 @@ function Chat({ username, userId, onSignout }) {
 
   const loadSessionMessages = async (sessionId) => {
     try {
-      const response = await fetch(`/api/v1/chat/${userId}/sessions/${sessionId}`);
+      const response = await loggedFetch(`/api/v1/chat/${userId}/sessions/${sessionId}`);
       if (response.ok) {
         const session = await response.json();
         
@@ -202,7 +205,7 @@ function Chat({ username, userId, onSignout }) {
         apiUrl = `/api/v1/chat/${userId}/new`;
       }
 
-      const response = await fetch(apiUrl, {
+      const response = await loggedFetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -339,7 +342,7 @@ function Chat({ username, userId, onSignout }) {
           apiUrl = `/api/v1/chat/${userId}/new`;
         }
 
-        const response = await fetch(apiUrl, {
+        const response = await loggedFetch(apiUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -387,7 +390,8 @@ function Chat({ username, userId, onSignout }) {
   };
 
   return (
-    <div className="terminal">
+    <div className={`terminal ${isPanelOpen ? 'with-api-panel' : ''}`}>
+      <ApiLogPanel />
       {showSessions && (
         <div className="sessions-sidebar">
           <div className="sessions-header">
@@ -471,6 +475,13 @@ function Chat({ username, userId, onSignout }) {
             title="Sessions"
           >
             sessions
+          </button>
+          <button 
+            className="api-log-btn"
+            onClick={togglePanel}
+            title="Toggle API Log Panel"
+          >
+            log
           </button>
           <button 
             className="signout-btn"

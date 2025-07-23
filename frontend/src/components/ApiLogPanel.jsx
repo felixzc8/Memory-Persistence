@@ -26,17 +26,17 @@ const ApiLogPanel = () => {
   };
 
   const getStatusColor = (status) => {
-    if (status === 'pending') return '#ffa500';
-    if (status >= 200 && status < 300) return '#00ff00';
-    if (status >= 400) return '#ff4444';
+    if (status === 'pending') return '#F35048';
+    if (status >= 200 && status < 300) return '#50DBD9';
+    if (status >= 400) return '#DC150B';
     return '#cccccc';
   };
 
   const getTypeColor = (type) => {
     switch (type) {
-      case 'request': return '#00aaff';
-      case 'response': return '#00ff00';
-      case 'error': return '#ff4444';
+      case 'request': return '#509DEA';
+      case 'response': return '#50DBD9';
+      case 'error': return '#DC150B';
       default: return '#cccccc';
     }
   };
