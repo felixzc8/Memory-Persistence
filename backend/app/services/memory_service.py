@@ -43,7 +43,7 @@ class MemoryService:
         formatted_memories = []
         for memory in memories:
             updated_date = memory.updated_at.strftime("%Y-%m-%d %H:%M")
-            status = memory.memory_attributes.get('status')
+            status = memory.memory_attributes.status
             
             memory_entry = f"• **Memory ({status})** - Updated: {updated_date}\n  {memory.content}"
             formatted_memories.append(memory_entry)

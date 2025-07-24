@@ -54,20 +54,27 @@ export const ApiLogProvider = ({ children }) => {
       const endTime = Date.now();
       const duration = endTime - startTime;
       
-      // Clone response to read body without consuming it
-      const responseClone = response.clone();
+      // Handle response body reading
       let responseBody = null;
+      const contentType = response.headers.get('content-type');
       
-      try {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          responseBody = await responseClone.json();
-        } else if (contentType && contentType.includes('text/')) {
-          responseBody = await responseClone.text();
+      // Skip body reading for streaming responses
+      if (contentType && contentType.includes('text/event-stream')) {
+        responseBody = '[Streaming response - body not logged]';
+      } else {
+        // Clone response to read body without consuming it
+        const responseClone = response.clone();
+        
+        try {
+          if (contentType && contentType.includes('application/json')) {
+            responseBody = await responseClone.json();
+          } else if (contentType && contentType.includes('text/')) {
+            responseBody = await responseClone.text();
+          }
+        } catch (e) {
+          // Response might not be readable
+          responseBody = '[Unable to read response body]';
         }
-      } catch (e) {
-        // Response might not be readable (e.g., streaming)
-        responseBody = '[Unable to read response body]';
       }
       
       // Log response

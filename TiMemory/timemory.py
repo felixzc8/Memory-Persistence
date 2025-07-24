@@ -5,8 +5,9 @@ from .tidb_vector import TiDBVector
 from .session_manager import SessionManager
 from . import database
 from typing import List, Dict
-from .schemas.memory import MemoryResponse, Memory, MemoryExtractionResponse, MemoryConsolidationResponse, MemoryConsolidationItem, MemoryAttributes
+from .schemas.memory import Memory, MemoryExtractionResponse, MemoryConsolidationResponse, MemoryConsolidationItem, MemoryAttributes
 from .config.base import MemoryConfig
+from .models.message import Message
 
 from uuid import uuid4
 import logging
@@ -57,11 +58,9 @@ class TiMemory:
             new_summary = await self.generate_conversation_summary(session_id, current_summary)
             current_count = self.session_manager.get_message_count(session_id)
             
-            # Generate embedding for the summary
-            summary_embedding = self.embedder.embed(new_summary)
+            summary_embedding = self.embedder.embed(new_summary.output_text)
             
-            # Create new summary record
-            self.session_manager.create_summary(session_id, new_summary, summary_embedding, current_count)
+            self.session_manager.create_summary(session_id, new_summary.output_text, summary_embedding, current_count)
         
         
         extraction_response = self._extract_memories(messages)
@@ -100,7 +99,7 @@ class TiMemory:
     def search(self, query: str, user_id: str, limit: int = 10) -> Dict:
         """
         Search for memories based on a query string.
-        Returns a list of memory content.
+        Returns a list of memory content under the 'results' key.
         """
         embedding = self.embedder.embed(query)
         results = self.tidbvector.search(embedding, user_id, limit=limit)
@@ -196,34 +195,28 @@ class TiMemory:
                 )
 
     async def generate_conversation_summary(self, session_id: str, existing_summary: str = None) -> str:
-        """Generate summary for messages beyond limit - summary_threshold to avoid knowledge gaps."""
-        from .models.message import Message
+        """Generate summary from existing summary and recent chat messages."""
         
         with database.SessionLocal() as db:
-            all_messages = db.query(Message).filter(
+            recent_messages = db.query(Message).filter(
                 Message.session_id == session_id
-            ).order_by(Message.created_at).all()
+            ).order_by(Message.created_at.desc()).limit(self.message_limit).all()
             
-            total_messages = len(all_messages)
-            if total_messages <= self.message_limit:
-                return existing_summary or ""
-
-            summary_cutoff = self.message_limit - self.summary_threshold
-            messages_to_summarize = all_messages[:summary_cutoff]
+            recent_messages.reverse()
             
-            if not messages_to_summarize:
-                return existing_summary or ""
+            input_messages = []
             
-            conversation_data = {
-                "conversation": [
-                    {"role": msg.role, "content": msg.content} 
-                    for msg in messages_to_summarize
-                ],
-                "existing_summary": existing_summary or "None"
-            }
+            if existing_summary:
+                input_messages.append({"role": "system", "content": f"Existing summary: {existing_summary}"})
+            
+            for message in recent_messages:
+                input_messages.append({"role": message.role, "content": message.content})
+            
+            self.logger.info(f"Generating summary with input: {input_messages}")
             
             response = self.llm.generate_response(
                 instructions=self.conversation_summary_prompt,
-                input=conversation_data
+                input=input_messages
             )
-            return response.response_text.strip() if hasattr(response, 'response_text') else str(response).strip()
+            self.logger.info(f"Generated summary response: {response}")
+            return response

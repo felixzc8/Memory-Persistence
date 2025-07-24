@@ -144,8 +144,7 @@ class SessionManager:
                 )
                 
                 db.add(message)
-                
-                session.last_activity = datetime.now(timezone.utc)
+                session.message_count += 1
                 
                 db.commit()
                 
@@ -290,12 +289,16 @@ class SessionManager:
 
     def should_generate_summary(self, session_id: str, message_limit: int, summary_threshold: int) -> bool:
         """
-        Check if summary should be generated based on new logic:
+        Check if summary should be generated:
         1. Once total message count reaches message_limit, generate first summary
         2. When difference between current count and latest summary's message_count_at_creation >= summary_threshold, generate new summary
         """
         with self.db_session_factory() as db:
-            current_count = self.get_message_count(session_id)
+            session = db.query(Session).filter(Session.session_id == session_id).first()
+            if not session:
+                return False
+                
+            current_count = session.message_count
             
             if current_count < message_limit:
                 return False

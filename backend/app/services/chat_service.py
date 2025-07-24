@@ -70,7 +70,7 @@ class ChatService:
                     full_response += content
                     yield f"event: content\ndata: {json.dumps({'content': content})}\n\n"
                 elif event.type == "response.completed":
-                    pass
+                    yield f"event: complete\ndata: {json.dumps({'status': 'completed'})}\n\n"
                 elif event.type == "error":
                     logger.error(f"Streaming error: {event}")
                     yield f"event: error\ndata: {json.dumps({'error': str(event)})}\n\n"

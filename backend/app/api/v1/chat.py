@@ -35,14 +35,18 @@ async def new_chat_session(user_id: str, request: ChatRequest, req: Request):
     accept_header = req.headers.get("accept", "application/json")
     
     if "text/event-stream" in accept_header:
-        stream_generator = chat_service.chat_with_memory_stream(
-            message=request.message,
-            user_id=user_id,
-            session_id=session_id
-        )
+        async def stream_with_session_created():
+            import json
+            yield f"event: session_created\ndata: {json.dumps({'session_id': session_id, 'title': title})}\n\n"
+            async for chunk in chat_service.chat_with_memory_stream(
+                message=request.message,
+                user_id=user_id,
+                session_id=session_id
+            ):
+                yield chunk
         
         return StreamingResponse(
-            stream_generator, 
+            stream_with_session_created(), 
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",

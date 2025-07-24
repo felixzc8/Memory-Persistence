@@ -280,6 +280,7 @@ function Chat({ username, userId, onSignout }) {
               switch (eventType) {
                 case 'session_created':
                   newSessionId = parsedData.session_id;
+                  setCurrentSessionId(parsedData.session_id);
                   break;
                 case 'content':
                   fullResponse += parsedData.content;

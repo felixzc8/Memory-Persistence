@@ -17,7 +17,7 @@ class OpenAILLM:
         
         return response
     
-    def generate_response(self, instructions: str, input: str):
+    def generate_response(self, instructions: str, input):
         response = self.client.responses.create(
             model=self.model,
             instructions=instructions,
