@@ -92,10 +92,15 @@
 
 .input-container {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   background-color: #1a1a1a;
   border-top: 1px solid #555555;
   padding-top: 10px;
+}
+
+.prompt {
+  line-height: 1.4;
+  padding-top: 0;
 }
 
 .chat-input {
@@ -107,6 +112,11 @@
   font-size: 14px;
   outline: none;
   padding: 0;
+  resize: none;
+  overflow-y: auto;
+  min-height: 20px;
+  max-height: 120px;
+  line-height: 1.4;
 }
 
 .chat-input::placeholder {
