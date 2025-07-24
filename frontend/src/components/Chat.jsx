@@ -48,10 +48,11 @@ function Chat({ username, userId, onSignout }) {
   }, [messages]);
 
   useEffect(() => {
-    if (!isLoading && !isStreaming && inputRef.current) {
+    if (inputRef.current) {
       inputRef.current.focus();
     }
-  }, [isLoading, isStreaming]);
+  }, []);
+
 
   useEffect(() => {
     let isCancelled = false;
@@ -123,10 +124,6 @@ function Chat({ username, userId, onSignout }) {
     
     if (username && userId) {
       initializeUser();
-    }
-    
-    if (inputRef.current) {
-      inputRef.current.focus();
     }
     
     return () => {
@@ -320,6 +317,9 @@ function Chat({ username, userId, onSignout }) {
     } finally {
       setIsStreaming(false);
       setStreamingMessage('');
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
     }
   };
 
@@ -329,17 +329,28 @@ function Chat({ username, userId, onSignout }) {
     if (input.trim() === 'sessions') {
       setShowSessions(!showSessions);
       setInput('');
+      if (inputRef.current) {
+        inputRef.current.style.height = 'auto';
+        inputRef.current.focus();
+      }
       return;
     }
 
     if (input.trim() === 'new') {
       createNewSession();
       setInput('');
+      if (inputRef.current) {
+        inputRef.current.style.height = 'auto';
+        inputRef.current.focus();
+      }
       return;
     }
 
     const messageText = input;
     setInput('');
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
     
     try {
       await sendMessageStreaming(messageText);
@@ -396,6 +407,9 @@ function Chat({ username, userId, onSignout }) {
         setMessages(prev => [...prev, errorMessage]);
       } finally {
         setIsLoading(false);
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
       }
     }
   };
@@ -404,6 +418,16 @@ function Chat({ username, userId, onSignout }) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setInput(e.target.value);
+    
+    // Auto-resize textarea
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+      inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 120)}px`;
     }
   };
 
@@ -417,7 +441,12 @@ function Chat({ username, userId, onSignout }) {
             <button onClick={() => setShowSessions(false)} className="close-btn">×</button>
           </div>
           <div className="sessions-actions">
-            <button onClick={createNewSession} className="new-session-btn">+ New Chat</button>
+            <button onClick={() => {
+              createNewSession();
+              if (inputRef.current) {
+                inputRef.current.focus();
+              }
+            }} className="new-session-btn">+ New Chat</button>
           </div>
           <div className="sessions-list">
             {sessions.map((session) => (
@@ -428,6 +457,9 @@ function Chat({ username, userId, onSignout }) {
                   setCurrentSessionId(session.session_id);
                   loadSessionMessages(session.session_id);
                   setShowSessions(false);
+                  if (inputRef.current) {
+                    inputRef.current.focus();
+                  }
                 }}
               >
                 <div className="session-title">{session.title}</div>
@@ -477,15 +509,15 @@ function Chat({ username, userId, onSignout }) {
         
         <div className="input-container">
           <span className="prompt">{username}$:</span>
-          <input
+          <textarea
             ref={inputRef}
-            type="text"
             className="chat-input"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={handleInputChange}
             onKeyPress={handleKeyPress}
             placeholder="Type message, 'sessions', or 'new'..."
             disabled={isLoading || isStreaming}
+            rows={1}
           />
           <button 
             className="sessions-btn"
