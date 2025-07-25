@@ -1,0 +1,57 @@
+.start-screen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  padding: 20px;
+}
+
+.welcome-text {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.welcome-text h1 {
+  color: #DC150B;
+  font-size: 24px;
+  margin-bottom: 10px;
+  font-weight: normal;
+}
+
+.welcome-text p {
+  color: #cccccc;
+  font-size: 16px;
+}
+
+.username-input-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.username-input {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 16px;
+  outline: none;
+  padding: 8px 0;
+  min-width: 200px;
+  border-bottom: 1px solid #555555;
+}
+
+.username-input::placeholder {
+  color: #888888;
+}
+
+.username-input:focus {
+  border-bottom-color: #DC150B;
+}
+
+.prompt {
+  color: #DC150B;
+  margin-right: 10px;
+  user-select: none;
+}
