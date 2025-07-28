@@ -3,10 +3,12 @@ from .llms.openai import OpenAILLM
 from .embedding.openai import OpenAIEmbeddingModel
 from .tidb_vector import TiDBVector
 from .session_manager import SessionManager
+from .knowledge_graph_client import KnowledgeGraphClient
 from . import database
 from typing import List, Dict
 from .schemas.memory import Memory, MemoryExtractionResponse, MemoryConsolidationResponse, MemoryConsolidationItem, MemoryAttributes
 from .config.base import MemoryConfig
+from .config.timemory_config import TiMemoryConfig
 from .models.message import Message
 
 from uuid import uuid4
@@ -17,9 +19,7 @@ class TiMemory:
         self.fact_extraction_prompt = FACT_EXTRACTION_PROMPT
         self.memory_consolidation_prompt = MEMORY_CONSOLIDATION_PROMPT
         self.conversation_summary_prompt = CONVERSATION_SUMMARY_PROMPT
-        self.config = config
-        self.message_limit = config.message_limit
-        self.summary_threshold = config.summary_threshold
+        self.config = TiMemoryConfig(config)
 
         database.initialize_database(config)
         database.create_tables()
@@ -39,6 +39,10 @@ class TiMemory:
             db_session_factory=database.SessionLocal
         )
         
+        self.knowledge_graph_client = KnowledgeGraphClient(
+            config=self.config
+        )
+        
         self.logger = logging.getLogger(__name__)
         
     async def process_messages(self, messages: List[Dict[str, str]], user_id: str, session_id: str = None):
@@ -48,10 +52,10 @@ class TiMemory:
         """
         self.logger.info(f"Starting process_messages for user {user_id}")
         
-        if session_id and self.session_manager.should_generate_summary(
+        if session_id and await self.session_manager.should_generate_summary(
             session_id, 
-            self.message_limit, 
-            self.summary_threshold
+            self.config.message_limit, 
+            self.config.summary_threshold
         ):
             self.logger.info(f"Generating summary for session {session_id}")
             current_summary = self.session_manager.get_session_summary(session_id)
@@ -61,7 +65,19 @@ class TiMemory:
             summary_embedding = self.embedder.embed(new_summary.output_text)
             
             self.session_manager.create_summary(session_id, new_summary.output_text, summary_embedding, current_count)
-        
+
+        message_count = self.session_manager.get_message_count(session_id)
+        if message_count % self.config.message_limit == 0:
+            try:
+                recent_messages = self.session_manager.get_session_message_context(session_id, self.config.message_limit)
+                await self.knowledge_graph_client.save_personal_memory(
+                    chat_history=recent_messages,
+                    user_id=user_id,
+                    session_id=session_id
+                )
+                self.logger.info(f"Successfully sent summary data to knowledge graph for session {session_id}")
+            except Exception as e:
+                    self.logger.error(f"Failed to send data to knowledge graph for session {session_id}: {e}")
         
         extraction_response = self._extract_memories(messages)
         self.logger.info(f"Extracted {len(extraction_response.memories)} memories: {extraction_response.memories}")
@@ -200,7 +216,7 @@ class TiMemory:
         with database.SessionLocal() as db:
             recent_messages = db.query(Message).filter(
                 Message.session_id == session_id
-            ).order_by(Message.created_at.desc()).limit(self.message_limit).all()
+            ).order_by(Message.created_at.desc()).limit(self.config.message_limit).all()
             
             recent_messages.reverse()
             

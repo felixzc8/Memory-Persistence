@@ -18,6 +18,7 @@ dependencies = [
     "logfire[sqlalchemy]",
     "logfire[fastapi]",
     "timemory",
+    "httpx>=0.28.1",
 ]
 
 [build-system]
