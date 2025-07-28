@@ -43,7 +43,7 @@ class ChatService:
             summary = memory_service.memory.session_manager.get_session_summary(session_id)
             session_context = memory_service.memory.session_manager.get_session_message_context(
                 session_id, 
-                memory_service.memory.message_limit
+                memory_service.memory.config.message_limit
             )
 
             instructions = SYSTEM_PROMPT
@@ -111,7 +111,7 @@ class ChatService:
             summary = memory_service.memory.session_manager.get_session_summary(session_id)
             session_context = memory_service.memory.session_manager.get_session_message_context(
                 session_id, 
-                memory_service.memory.message_limit
+                memory_service.memory.config.message_limit
             )
             
             memories = memory_service.search_memories(

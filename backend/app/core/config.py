@@ -1,12 +1,11 @@
 from dotenv import load_dotenv
 import os
-import ssl
 from typing import Optional
-from pydantic_settings import BaseSettings
+from TiMemory.config.base import MemoryConfig
 
 load_dotenv()
 
-class Settings(BaseSettings):
+class Settings(MemoryConfig):
     model_config = {"protected_namespaces": (), "env_file": ".env"}
     
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
@@ -19,21 +18,8 @@ class Settings(BaseSettings):
     tidb_password: str = os.getenv("TIDB_PASSWORD", "")
     tidb_db_name: str = os.getenv("TIDB_DB_NAME", "")
     
-    tidb_use_ssl: bool = True
-    tidb_verify_cert: bool = True
-    tidb_ssl_ca: Optional[str] = ssl.get_default_verify_paths().cafile
-    embedding_model_dims: int = 1536
-    memory_collection_name: str = "memories"
-    memory_search_limit: int = 10
-    message_limit: int = 20
-    summary_threshold: int = 10
     
-    @property
-    def tidb_connection_string(self) -> str:
-        """Construct TiDB connection string for SQLAlchemy"""
-        return f"mysql+pymysql://{self.tidb_user}:{self.tidb_password}@{self.tidb_host}:{self.tidb_port}/{self.tidb_db_name}?ssl_ca={self.tidb_ssl_ca}&ssl_verify_cert=true&ssl_verify_identity=true"
-    
-
+    # Backend-specific settings
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     debug: bool = True
