@@ -1208,6 +1208,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "logfire", extra = ["fastapi", "sqlalchemy"] },
     { name = "openai" },
     { name = "pydantic" },
@@ -1225,6 +1226,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = "==0.115.13" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "logfire" },
     { name = "logfire", extras = ["fastapi"] },
     { name = "logfire", extras = ["sqlalchemy"] },
