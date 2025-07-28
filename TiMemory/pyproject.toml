@@ -11,8 +11,9 @@ dependencies = [
     "pydantic>=2.0.0",
     "sqlalchemy>=2.0.0",
     "tidb-vector>=0.0.5",
+    "celery>=5.0.0",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 
 [tool.setuptools]
 packages = ["TiMemory"]
