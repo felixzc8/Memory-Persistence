@@ -4,21 +4,12 @@ from typing import Optional
 from dotenv import load_dotenv
 from .base import MemoryConfig
 
-def load_timemory_env():
-    """Load TiMemory-specific .env file if it exists"""
-    timemory_dir = Path(__file__).parent.parent
-    env_path = timemory_dir / '.env'
-    
-    if env_path.exists():
-        load_dotenv(env_path)
-        return True
-    return False
+load_dotenv()
 
 class TiMemoryConfig:
     """TiMemory-specific configuration wrapper that adds knowledge graph settings"""
     
     def __init__(self, base_config: MemoryConfig):
-        load_timemory_env()
         self._base_config = base_config
     
     @property
