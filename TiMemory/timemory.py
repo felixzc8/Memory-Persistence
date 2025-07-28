@@ -41,7 +41,7 @@ class TiMemory:
         
         self.knowledge_graph_client = KnowledgeGraphClient(
             config=self.config
-        ) if self.config.knowledge_graph_url else None
+        )
         
         self.logger = logging.getLogger(__name__)
         
@@ -52,7 +52,7 @@ class TiMemory:
         """
         self.logger.info(f"Starting process_messages for user {user_id}")
         
-        if session_id and self.session_manager.should_generate_summary(
+        if session_id and await self.session_manager.should_generate_summary(
             session_id, 
             self.config.message_limit, 
             self.config.summary_threshold
@@ -65,21 +65,19 @@ class TiMemory:
             summary_embedding = self.embedder.embed(new_summary.output_text)
             
             self.session_manager.create_summary(session_id, new_summary.output_text, summary_embedding, current_count)
-            
-            if self.knowledge_graph_client:
-                try:
-                    recent_messages = self.session_manager.get_session_message_context(session_id, self.config.message_limit)
-                    await self.knowledge_graph_client.save_personal_memory(
-                        chat_history=recent_messages,
-                        user_id=user_id,
-                        session_id=session_id
-                    )
-                    self.logger.info(f"Successfully sent summary data to knowledge graph for session {session_id}")
-                except Exception as e:
+
+        message_count = self.session_manager.get_message_count(session_id)
+        if message_count % self.config.message_limit == 0:
+            try:
+                recent_messages = self.session_manager.get_session_message_context(session_id, self.config.message_limit)
+                await self.knowledge_graph_client.save_personal_memory(
+                    chat_history=recent_messages,
+                    user_id=user_id,
+                    session_id=session_id
+                )
+                self.logger.info(f"Successfully sent summary data to knowledge graph for session {session_id}")
+            except Exception as e:
                     self.logger.error(f"Failed to send data to knowledge graph for session {session_id}: {e}")
-            else:
-                self.logger.debug("Knowledge graph client not configured, skipping knowledge graph integration")
-        
         
         extraction_response = self._extract_memories(messages)
         self.logger.info(f"Extracted {len(extraction_response.memories)} memories: {extraction_response.memories}")
