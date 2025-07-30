@@ -1,10 +1,9 @@
 from .prompts import FACT_EXTRACTION_PROMPT, MEMORY_CONSOLIDATION_PROMPT, CONVERSATION_SUMMARY_PROMPT
 from .llms.openai import OpenAILLM
 from .embedding.openai import OpenAIEmbeddingModel
-from .tidb_vector import TiDBVector
+from .tidb import TiDB
 from .session_manager import SessionManager
 from .knowledge_graph_client import KnowledgeGraphClient
-from . import database
 from typing import List, Dict
 from .schemas.memory import Memory, MemoryExtractionResponse, MemoryConsolidationResponse, MemoryConsolidationItem, MemoryAttributes
 from .config.base import MemoryConfig
@@ -21,22 +20,13 @@ class TiMemory:
         self.conversation_summary_prompt = CONVERSATION_SUMMARY_PROMPT
         self.config = TiMemoryConfig(config)
 
-        database.initialize_database(config)
-        database.create_tables()
+        self.tidb = TiDB(config)
         
         self.embedder = OpenAIEmbeddingModel(config)
         self.llm = OpenAILLM(config)
         
-        from .models.memory import Memory as MemoryModel
-        self.tidbvector = TiDBVector(
-            db_session_factory=database.SessionLocal,
-            memory_model=MemoryModel,
-            create_tables_func=database.create_tables
-        )
-        self.tidbvector.create_table()
-        
         self.session_manager = SessionManager(
-            db_session_factory=database.SessionLocal
+            db_session_factory=self.tidb.SessionLocal
         )
         
         self.knowledge_graph_client = KnowledgeGraphClient(
@@ -118,7 +108,7 @@ class TiMemory:
         Returns a list of memory content under the 'results' key.
         """
         embedding = self.embedder.embed(query)
-        results = self.tidbvector.search(embedding, user_id, limit=limit)
+        results = self.tidb.search_memories(embedding, user_id, limit=limit)
 
         return {'results': results.memories}
 
@@ -126,7 +116,7 @@ class TiMemory:
         """
         Delete all memories for a user.
         """
-        self.tidbvector.delete_all(user_id=user_id)
+        self.tidb.delete_all_memories(user_id=user_id)
         
     def _extract_memories(self, messages: List[Dict[str, str]]) -> MemoryExtractionResponse:
         """
@@ -173,7 +163,7 @@ class TiMemory:
         
         for memory in new_memories.memories:
             embedding = self.embedder.embed(memory.content)
-            similar_memories = self.tidbvector.search(embedding, user_id, limit=self.config.memory_search_limit)
+            similar_memories = self.tidb.search_memories(embedding, user_id, limit=self.config.memory_search_limit)
             for mem in similar_memories.memories:
                 if mem.id not in seen_ids:
                     consolidation_item = MemoryConsolidationItem(
@@ -196,13 +186,13 @@ class TiMemory:
             status = memory.memory_attributes.status
             
             if status == 'outdated':
-                self.tidbvector.update(
+                self.tidb.update_memory(
                     id=memory.id,
                     vector=embedding,
                     memory_attributes=memory.memory_attributes.model_dump()
                 )
             else:
-                self.tidbvector.insert(
+                self.tidb.insert_memory(
                     id=memory.id,
                     vector=embedding,
                     user_id=user_id,
@@ -213,7 +203,7 @@ class TiMemory:
     async def generate_conversation_summary(self, session_id: str, existing_summary: str = None) -> str:
         """Generate summary from existing summary and recent chat messages."""
         
-        with database.SessionLocal() as db:
+        with self.tidb.SessionLocal() as db:
             recent_messages = db.query(Message).filter(
                 Message.session_id == session_id
             ).order_by(Message.created_at.desc()).limit(self.config.message_limit).all()
