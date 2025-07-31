@@ -42,6 +42,8 @@ Both TiMemory core and backend require `.env` files:
 - `cp TiMemory/.env.example TiMemory/.env` - Configure core memory system with Redis settings
 - `cp backend/.env.example backend/.env` - Configure backend API
 - Ensure Redis server is running: `redis-server` (install via `brew install redis` on macOS)
+- `cp TiMemory/.env.example TiMemory/.env` - Configure core memory system
+- `cp backend/.env.example backend/.env` - Configure backend API
 
 ## Architecture Overview
 
@@ -53,12 +55,15 @@ The heart of the project is a sophisticated AI-powered memory processing pipelin
   2. **Search**: Vector similarity search against existing memories using 1536-dimensional OpenAI embeddings
   3. **Consolidate**: LLM-driven memory conflict resolution and intelligent merging
   4. **Store**: Persistent storage in TiDB with vector embeddings and user isolation
+
   5. **Background Processing**: Redis + Celery workers for non-blocking memory operations
 
 - **Vector Database Operations** (`TiMemory/tidb_vector.py`): TiDB vector database wrapper with cosine similarity search
 - **LLM Integration** (`TiMemory/llms/openai.py`): OpenAI chat completion wrapper with structured output parsing
 - **Embeddings** (`TiMemory/embedding/openai.py`): OpenAI text-embedding-3-small integration (1536 dimensions)
+
 - **Background Workers** (`TiMemory/workers/`): Celery task queue for asynchronous memory processing
+
 - **Configuration** (`TiMemory/config/base.py`): Pydantic settings with environment variable support
 
 ### FastAPI Backend Architecture
