@@ -2,12 +2,12 @@ import httpx
 import json
 import logging
 from typing import Dict, List, Optional, Any
-from .config.timemory_config import TiMemoryConfig
+from .config.base import MemoryConfig
 
 logger = logging.getLogger(__name__)
 
 class KnowledgeGraphClient:
-    def __init__(self, config: TiMemoryConfig):
+    def __init__(self, config: MemoryConfig):
         self.config = config
         self.base_url = config.knowledge_graph_url.rstrip('/')
         self.client = httpx.AsyncClient(timeout=30.0)

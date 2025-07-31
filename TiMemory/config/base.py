@@ -1,19 +1,20 @@
 import ssl
 from typing import Optional
 from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
+from pathlib import Path
+
+# Load .env file from TiMemory package directory
+load_dotenv(Path(__file__).parents[1] / ".env")
 
 class MemoryConfig(BaseSettings):
     """Base configuration for memory system using Pydantic BaseSettings"""
     
-    model_config = {"env_file": ".env"}
-    
-    # OpenAI Configuration
     openai_api_key: str = ""
     model_choice: str = "gpt-4o-mini"
     embedding_model: str = "text-embedding-3-small"
     embedding_model_dims: int = 1536
     
-    # TiDB Configuration
     tidb_host: str = ""
     tidb_port: int = 4000
     tidb_user: str = ""
@@ -23,11 +24,18 @@ class MemoryConfig(BaseSettings):
     tidb_verify_cert: bool = True
     tidb_ssl_ca: Optional[str] = ssl.get_default_verify_paths().cafile
     
-    # Memory System Configuration
     memory_collection_name: str = "memories"
     memory_search_limit: int = 10
     message_limit: int = 20
     summary_threshold: int = 10
+    
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_db: int = 0
+    
+    knowledge_graph_url: str = ""
+    
+    logfire_token: Optional[str] = None
     
     
     @property

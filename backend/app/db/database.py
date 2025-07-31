@@ -1,15 +1,19 @@
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
-from app.core.config import settings
+from TiMemory.config.base import MemoryConfig
 from app.models import Base
 import logging
 import logfire
 
 logger = logging.getLogger(__name__)
+
+# Use TiMemory config for database connection
+memory_config = MemoryConfig()
+
 try:
-    logger.info(f"Connecting to database: {settings.tidb_host}:{settings.tidb_port}")
+    logger.info(f"Connecting to database: {memory_config.tidb_host}:{memory_config.tidb_port}")
     engine = create_engine(
-        settings.tidb_connection_string,
+        memory_config.tidb_connection_string,
         pool_pre_ping=True,
         pool_recycle=3600,
     )
@@ -39,7 +43,7 @@ def create_tables():
         
     except Exception as e:
         logger.error(f"Error creating backend database tables: {e}")
-        logger.error(f"Connection string host: {settings.tidb_host}:{settings.tidb_port}")
+        logger.error(f"Connection string host: {memory_config.tidb_host}:{memory_config.tidb_port}")
         raise
 
 def get_db():

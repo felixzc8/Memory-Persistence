@@ -168,7 +168,7 @@ async def search_user_memories(
         limit=request.limit
     )
     
-    memory_texts = [mem['memory'] for mem in memories]
+    memory_texts = [mem['content'] for mem in memories]
     
     return MemorySearchResponse(
         memories=memory_texts,
