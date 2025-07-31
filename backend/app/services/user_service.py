@@ -107,12 +107,13 @@ class UserService:
                 result = connection.execute(text("SHOW TABLES LIKE 'users'"))
                 table_exists = result.fetchone() is not None
                 
-                from app.core.config import settings
+                from TiMemory.config.base import MemoryConfig
+                memory_config = MemoryConfig()
                 return {
                     "status": "healthy",
                     "database": "tidb",
                     "users_table_exists": table_exists,
-                    "connection_string": settings.tidb_connection_string.split('@')[1]
+                    "connection_string": memory_config.tidb_connection_string.split('@')[1]
                 }
         except Exception as e:
             return {

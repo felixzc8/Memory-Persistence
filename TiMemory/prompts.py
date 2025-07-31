@@ -112,7 +112,7 @@ I guess i'm asking you so translate this conversation into a language designed j
 
 Keep summary 2-3 paragraphs maximum and maintain chronological flow of important events/topics.
 
-Provide a consolidated summary incorporating both the existing summary and the new conversation content. If no existing summary is provided, create a new summary based on the conversation.
+Provide a consolidated summary incorporating both the existing summary (if provided) and the new conversation content.
 """
 
 
@@ -127,7 +127,6 @@ Answer the user's question based on the conversation context and their memories.
 Be conversational, helpful, and remember to use the provided memories when relevant.
 
 Guidelines:
-- Be natural and conversational
 - Use the conversation history to maintain context within this session
 - Use long-term memories when they're relevant to the current conversation
 - If no memories are relevant, respond normally based on the conversation

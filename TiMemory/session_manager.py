@@ -264,7 +264,7 @@ class SessionManager:
                 Summary.session_id == session_id
             ).order_by(Summary.created_at.desc()).first()
 
-    async def should_generate_summary(self, session_id: str, message_limit: int, summary_threshold: int) -> bool:
+    def should_generate_summary(self, session_id: str, message_limit: int, summary_threshold: int) -> bool:
         """
         Check if summary should be generated:
         1. Once total message count reaches message_limit, generate first summary

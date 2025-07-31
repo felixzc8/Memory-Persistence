@@ -16,6 +16,7 @@ TiMemory is an advanced AI chatbot system with persistent memory capabilities bu
 - `cd TiMemory && uv install` - Install core memory system dependencies
 - `cd TiMemory && uv sync` - Sync virtual environment with lock file
 - `cd TiMemory && uv run python -c "from timemory import TiMemory; # test functionality"` - Test core system
+- `cd TiMemory && uv run celery -A celery_app worker --loglevel=info` - Start background memory processing workers
 
 ### Backend (FastAPI + Python)
 - `cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload` - Run development server with hot reload
@@ -38,6 +39,9 @@ TiMemory is an advanced AI chatbot system with persistent memory capabilities bu
 
 ### Environment Setup
 Both TiMemory core and backend require `.env` files:
+- `cp TiMemory/.env.example TiMemory/.env` - Configure core memory system with Redis settings
+- `cp backend/.env.example backend/.env` - Configure backend API
+- Ensure Redis server is running: `redis-server` (install via `brew install redis` on macOS)
 - `cp TiMemory/.env.example TiMemory/.env` - Configure core memory system
 - `cp backend/.env.example backend/.env` - Configure backend API
 
@@ -52,9 +56,14 @@ The heart of the project is a sophisticated AI-powered memory processing pipelin
   3. **Consolidate**: LLM-driven memory conflict resolution and intelligent merging
   4. **Store**: Persistent storage in TiDB with vector embeddings and user isolation
 
+  5. **Background Processing**: Redis + Celery workers for non-blocking memory operations
+
 - **Vector Database Operations** (`TiMemory/tidb_vector.py`): TiDB vector database wrapper with cosine similarity search
 - **LLM Integration** (`TiMemory/llms/openai.py`): OpenAI chat completion wrapper with structured output parsing
 - **Embeddings** (`TiMemory/embedding/openai.py`): OpenAI text-embedding-3-small integration (1536 dimensions)
+
+- **Background Workers** (`TiMemory/workers/`): Celery task queue for asynchronous memory processing
+
 - **Configuration** (`TiMemory/config/base.py`): Pydantic settings with environment variable support
 
 ### FastAPI Backend Architecture
@@ -232,13 +241,16 @@ LOGFIRE_TOKEN=your_logfire_token_for_observability
 
 ### Running Full Development Stack
 ```bash
-# Terminal 1: Start TiMemory core system (optional for testing)
-cd TiMemory && uv run python -c "from timemory import TiMemory; print('Core system ready')"
+# Terminal 1: Start Redis server
+redis-server
 
-# Terminal 2: Start backend server
+# Terminal 2: Start TiMemory background workers
+cd TiMemory && uv run celery -A celery_app worker --loglevel=info
+
+# Terminal 3: Start backend server
 cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-# Terminal 3: Start frontend server  
+# Terminal 4: Start frontend server  
 cd frontend && npm run dev
 ```
 

@@ -262,6 +262,10 @@ function Chat({ username, onSignout }) {
                     setCurrentSessionId(parsedData.session_id);
                     loadUserSessions();
                   }
+                  
+                  if (parsedData.memories && parsedData.memories.length > 0) {
+                    console.log('Memories used for response:', parsedData.memories);
+                  }
                   break;
                 case 'error':
                   throw new Error(parsedData.error);

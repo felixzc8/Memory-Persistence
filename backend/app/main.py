@@ -31,7 +31,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-logfire.configure(token=settings.logfire_token)
+logfire.configure(service_name="core", token=settings.logfire_token)
 basicConfig(handlers=[logfire.LogfireLoggingHandler()], level=logging.INFO)
 logfire.instrument_fastapi(app, capture_headers=True)
 
