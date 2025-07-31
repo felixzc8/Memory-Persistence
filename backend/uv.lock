@@ -56,6 +56,15 @@ wheels = [
 ]
 
 [[package]]
+name = "async-timeout"
+version = "5.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a5/ae/136395dfbfe00dfc94da3f3e136d0b13f394cba8f4841120e34226265780/async_timeout-5.0.1.tar.gz", hash = "sha256:d9321a7a3d5a6a5e187e824d2fa0793ce379a202935782d555d6e9d2735677d3", size = 9274, upload-time = "2024-11-06T16:41:39.6Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fe/ba/e2081de779ca30d473f21f5b30e0e737c438205440784c7dfc81efc2b029/async_timeout-5.0.1-py3-none-any.whl", hash = "sha256:39e3809566ff85354557ec2398b55e096c8364bacac9405a7a1fa429e77fe76c", size = 6233, upload-time = "2024-11-06T16:41:37.9Z" },
+]
+
+[[package]]
 name = "billiard"
 version = "4.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -541,6 +550,9 @@ wheels = [
 ]
 
 [package.optional-dependencies]
+celery = [
+    { name = "opentelemetry-instrumentation-celery" },
+]
 fastapi = [
     { name = "opentelemetry-instrumentation-fastapi" },
 ]
@@ -841,6 +853,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/2a/fa/1a1f6a98e8d5a4e9f4f5b7da1543fee4edcaa78eacf24850875823773a08/opentelemetry_instrumentation_asgi-0.56b0.tar.gz", hash = "sha256:e9142c7a5ad81c019070640ab8a1c217d2ca7cb7621e413cde78d0caece8cda8", size = 24654, upload-time = "2025-07-11T12:26:22.592Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c7/dd/655355453ee918455b5e7132f80366f594e0e7433dbcd03d2b0d6033088f/opentelemetry_instrumentation_asgi-0.56b0-py3-none-any.whl", hash = "sha256:7144793c1c601e47db6174d748ab437f7fa92f93a87d13882ad60a1f8147d2cf", size = 16602, upload-time = "2025-07-11T12:25:28.7Z" },
+]
+
+[[package]]
+name = "opentelemetry-instrumentation-celery"
+version = "0.56b0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-instrumentation" },
+    { name = "opentelemetry-semantic-conventions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a2/f8/ad485261f0c02b5b9d0b2a9b567d74a9c0696f08b4e9f85c8e912b31a6a2/opentelemetry_instrumentation_celery-0.56b0.tar.gz", hash = "sha256:6f1e891b5fb4b8b658a7daa08e112681a11e186cd5f7d33c2cf4755bce11e377", size = 14768, upload-time = "2025-07-11T12:26:30.526Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1e/c1/420e9628c888ce5392e33a71792124a3573bc34a1e453873d10a0ece0e23/opentelemetry_instrumentation_celery-0.56b0-py3-none-any.whl", hash = "sha256:94bfb2921403977c5ea44ffd697d11c1206dae5136382d3575e5400c8cb7c660", size = 13805, upload-time = "2025-07-11T12:25:36.95Z" },
 ]
 
 [[package]]
@@ -1173,6 +1199,18 @@ wheels = [
 ]
 
 [[package]]
+name = "redis"
+version = "6.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "async-timeout", marker = "python_full_version < '3.11.3'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ea/9a/0551e01ba52b944f97480721656578c8a7c46b51b99d66814f85fe3a4f3e/redis-6.2.0.tar.gz", hash = "sha256:e821f129b75dde6cb99dd35e5c76e8c49512a5a0d8dfdc560b2fbd44b85ca977", size = 4639129, upload-time = "2025-05-28T05:01:18.91Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/13/67/e60968d3b0e077495a8fee89cf3f2373db98e528288a48f1ee44967f6e8c/redis-6.2.0-py3-none-any.whl", hash = "sha256:c8ddf316ee0aab65f04a11229e94a64b2618451dab7a67cb2f77eb799d872d5e", size = 278659, upload-time = "2025-05-28T05:01:16.955Z" },
+]
+
+[[package]]
 name = "requests"
 version = "2.32.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1318,9 +1356,14 @@ version = "0.1.0"
 source = { editable = "../TiMemory" }
 dependencies = [
     { name = "celery" },
+    { name = "httpx" },
+    { name = "logfire", extra = ["celery"] },
     { name = "openai" },
     { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "pymysql" },
     { name = "python-dotenv" },
+    { name = "redis" },
     { name = "sqlalchemy" },
     { name = "tidb-vector" },
 ]
@@ -1328,9 +1371,15 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "celery", specifier = ">=5.0.0" },
+    { name = "httpx", specifier = ">=0.24.0" },
+    { name = "logfire" },
+    { name = "logfire", extras = ["celery"] },
     { name = "openai", specifier = ">=1.0.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
+    { name = "pydantic-settings", specifier = ">=2.0.0" },
+    { name = "pymysql", specifier = ">=1.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "redis", specifier = ">=4.0.0" },
     { name = "sqlalchemy", specifier = ">=2.0.0" },
     { name = "tidb-vector", specifier = ">=0.0.5" },
 ]
