@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from app.schemas.chat import ChatRequest
-from TiMemory.schemas.memory import MemorySearchRequest, MemorySearchResponse
 from TiMemory.schemas.session import (
     Session,
     SessionListResponse,
@@ -13,7 +12,8 @@ from app.dependencies.memory import get_available_memory_service
 from app.services.user_service import user_service
 from app.dependencies.auth import get_authenticated_user
 from app.dependencies.session import get_user_session
-from app.dependencies.validation import validate_chat_request, validate_memory_search_request
+from app.dependencies.validation import validate_chat_request
+from TiMemory.schemas.memory import Memory, MemoryResponse
 from datetime import datetime, timezone
 import logging
 
@@ -151,38 +151,13 @@ async def delete_user_session(user_id: str, session_id: str):
         return {"message": "Session deleted successfully"}
     return {"message": "Session deleted successfully"}
 
-@router.post("/{user_id}/memories/search", response_model=MemorySearchResponse)
-async def search_user_memories(
-    user_id: str, 
-    request: MemorySearchRequest,
-    memory_svc = Depends(get_available_memory_service)
-):
+@router.get("/{user_id}/memories", response_model=MemoryResponse)
+async def get_user_memories(user_id: str):
     """
-    Search through user's memories
+    Get all memories for the user
     """
-    await validate_memory_search_request(user_id, request)
-    
-    memories = memory_svc.search_memories(
-        query=request.query,
-        user_id=user_id,
-        limit=request.limit
-    )
-    
-    memory_texts = [mem['content'] for mem in memories]
-    
-    return MemorySearchResponse(
-        memories=memory_texts,
-        user_id=user_id,
-        query=request.query
-    )
-
-@router.get("/{user_id}/memories/summary")
-async def get_user_memory_summary(user_id: str):
-    """
-    Get a summary of user's conversation history
-    """
-    summary = await chat_service.get_conversation_summary(user_id)
-    return {"user_id": user_id, "summary": summary}
+    memories = memory_service.get_memories(user_id)
+    return memories
 
 @router.delete("/{user_id}/memories")
 async def delete_user_memories(

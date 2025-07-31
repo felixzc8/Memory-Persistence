@@ -5,7 +5,7 @@ from .tidb import TiDB
 from .session_manager import SessionManager
 from .knowledge_graph_client import KnowledgeGraphClient
 from typing import List, Dict
-from .schemas.memory import Memory, MemoryExtractionResponse, MemoryConsolidationResponse, MemoryConsolidationItem
+from .schemas.memory import Memory, MemoryResponse, MemoryExtractionResponse, MemoryConsolidationResponse, MemoryConsolidationItem
 from .config.base import MemoryConfig
 from .models.message import Message
 from TiMemory.tasks.memory_tasks import process_memories, process_summaries
@@ -147,8 +147,6 @@ class TiMemory:
             except Exception as e:
                 self.logger.error(f"Failed to send data to knowledge graph for session {session_id}: {e}")
 
-    
-    
     def search(self, query: str, user_id: str, limit: int = 10) -> List[Memory]:
         """
         Search for memories based on a query string.
@@ -158,6 +156,13 @@ class TiMemory:
         results = self.tidb.search_memories(embedding, user_id, limit=limit)
 
         return results.memories
+
+    def get_all_memories(self, user_id: str) -> MemoryResponse:
+        """        Get all memories for a user.
+        Returns a MemoryResponse containing a list of Memory objects.
+        """
+        memories = self.tidb.get_memories_by_user(user_id)
+        return memories
 
     def delete_all(self, user_id: str):
         """

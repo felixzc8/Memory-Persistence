@@ -1,5 +1,6 @@
 from TiMemory import TiMemory
 from TiMemory.config.base import MemoryConfig
+from TiMemory.schemas.memory import MemoryResponse
 from typing import List, Dict, Any
 from app.core.exceptions import ChatException
 import logging
@@ -10,7 +11,6 @@ class MemoryService:
     """Service for managing persistent memory using TiMemory core system"""
     
     def __init__(self):
-        # TiMemory handles its own configuration from environment variables
         memory_config = MemoryConfig()
         self.memory = TiMemory(config=memory_config)
     
@@ -19,12 +19,18 @@ class MemoryService:
         """Search for relevant memories based on query"""
         try:
             memories = self.memory.search(query=query, user_id=user_id, limit=limit)
-            # Convert Memory objects to dictionaries for API response
             return [{"content": mem.content, "type": mem.memory_attributes.type} for mem in memories]
         except Exception as e:
             logger.error(f"Error searching memories for user {user_id}: {e}")
             raise ChatException(f"Memory search failed for user {user_id}") from e
     
+    def get_memories(self, user_id: str) -> MemoryResponse:
+        try:
+            memories = self.memory.get_all_memories(user_id=user_id)
+            return memories
+        except Exception as e:
+            logger.error(f"Error getting memories for user {user_id}: {e}")
+            raise ChatException(f"Memory retrieval failed for user {user_id}") from e
     
     def delete_memories(self, user_id: str) -> bool:
         """Delete all memories for a user"""

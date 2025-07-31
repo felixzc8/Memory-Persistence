@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime
 
 class MemoryAttributes(BaseModel):
     type: Optional[str] = None
@@ -35,12 +35,3 @@ class MemoryConsolidationResponse(BaseModel):
 class MemoryResponse(BaseModel):
     memories: List[Memory]
     
-class MemorySearchRequest(BaseModel):
-    query: str = Field(..., min_length=1, description="Search query for memories")
-    user_id: str = Field(..., min_length=1, description="User identifier for memory isolation")
-    limit: int = Field(default=10, ge=1, le=50, description="Maximum number of memories to return")
-
-class MemorySearchResponse(BaseModel):
-    memories: List[str] = Field(..., description="List of relevant memories")
-    user_id: str = Field(..., description="User identifier")
-    query: str = Field(..., description="Original search query")

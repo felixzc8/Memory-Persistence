@@ -107,6 +107,7 @@ class TiDB:
             
             logger.info(f"Found {len(results)} memories for user: {user_id}: {memory_schemas}")
             return MemoryResponse(memories=memory_schemas)
+    
         
     def delete_memory(self, id: str):
         """Delete a memory by its ID"""
@@ -147,7 +148,7 @@ class TiDB:
                 logger.warning(f"Memory with ID: {id} not found")
                 return None
     
-    def get_memories_by_user(self, user_id: str, limit: Optional[int] = None) -> List[Any]:
+    def get_memories_by_user(self, user_id: str, limit: Optional[int] = None) -> MemoryResponse:
         """Get all memories for a specific user"""
         with self.SessionLocal() as db:
             query = db.query(self.memory_model).filter(self.memory_model.user_id == user_id).order_by(self.memory_model.created_at.desc())
@@ -156,8 +157,10 @@ class TiDB:
             
             results = query.all()
             logger.info(f"Retrieved {len(results)} memories for user: {user_id}")
-            return results
-    
+            
+            memory_schemas = [MemorySchema.model_validate(result, from_attributes=True) for result in results]
+            return MemoryResponse(memories=memory_schemas)
+
     def delete_all_memories(self, user_id: str):
         """Delete all memories for a specific user"""
         with self.SessionLocal() as db:
