@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { marked } from 'marked';
 import { useApiLog } from '../contexts/ApiLogContext';
-import ApiLogPanel from './ApiLogPanel';
+import InsightPanel from './InsightPanel';
 import '../styles/chat.css';
 
 function Chat({ username, onSignout }) {
@@ -170,11 +170,82 @@ function Chat({ username, onSignout }) {
         }
       ]);
       console.log('Ready for new session - will be created on first message');
+      
+      // Focus the input after creating new session
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
     } catch (error) {
       console.error('Error creating new session:', error);
     }
   };
 
+
+  const parseSSEEvent = (event) => {
+    if (!event.trim()) return null;
+    
+    const lines = event.split('\n');
+    let eventType = null;
+    let data = null;
+    
+    for (const line of lines) {
+      if (line.startsWith('event: ')) {
+        eventType = line.substring(7);
+      } else if (line.startsWith('data: ')) {
+        data = line.substring(6);
+      }
+    }
+    
+    if (!eventType || !data) return null;
+    
+    try {
+      return { eventType, parsedData: JSON.parse(data) };
+    } catch (parseError) {
+      console.warn('Failed to parse SSE data:', parseError);
+      return null;
+    }
+  };
+
+  const handleSSEEvent = (eventType, parsedData, streamingMessageIndex, fullResponseRef) => {
+    switch (eventType) {
+      case 'session_created':
+        setCurrentSessionId(parsedData.session_id);
+        break;
+      case 'content':
+        fullResponseRef.current += parsedData.content;
+        setMessages(prev => prev.map((msg, index) => 
+          index === streamingMessageIndex ? 
+            { ...msg, content: fullResponseRef.current } : msg
+        ));
+        break;
+      case 'complete':
+        if (parsedData.session_id && parsedData.session_id !== currentSessionId) {
+          setCurrentSessionId(parsedData.session_id);
+          loadUserSessions();
+        }
+        if (parsedData.memories && parsedData.memories.length > 0) {
+          console.log('Memories used for response:', parsedData.memories);
+        }
+        break;
+      case 'error':
+        throw new Error(parsedData.error);
+    }
+  };
+
+  const processStreamChunk = (buffer, decoder, value, streamingMessageIndex, fullResponseRef) => {
+    const newBuffer = buffer + decoder.decode(value, { stream: true });
+    const events = newBuffer.split('\n\n');
+    const remainingBuffer = events.pop() || '';
+    
+    for (const event of events) {
+      const parsed = parseSSEEvent(event);
+      if (!parsed) continue;
+      
+      handleSSEEvent(parsed.eventType, parsed.parsedData, streamingMessageIndex, fullResponseRef);
+    }
+    
+    return remainingBuffer;
+  };
 
   const sendMessageStreaming = async (messageText) => {
     const userMessage = {
@@ -182,16 +253,16 @@ function Chat({ username, onSignout }) {
       content: messageText,
       timestamp: new Date()
     };
-
     setMessages(prev => [...prev, userMessage]);
     setIsStreaming(true);
 
     try {
       const requestBody = { message: messageText, user_id: username };
-
-      const response = await loggedFetch(currentSessionId 
+      const url = currentSessionId 
         ? `/api/v1/chat/${username}/${currentSessionId}` 
-        : `/api/v1/chat/${username}/new`, {
+        : `/api/v1/chat/${username}/new`;
+      
+      const response = await loggedFetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -199,18 +270,17 @@ function Chat({ username, onSignout }) {
         },
         body: JSON.stringify(requestBody)
       });
-
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = '';
-      let fullResponse = '';
-      let newSessionId = null;
-
       const streamingMessageIndex = messages.length + 1;
+      const fullResponseRef = { current: '' };
+      let buffer = '';
+      
       setMessages(prev => [...prev, {
         type: 'assistant',
         content: '',
@@ -220,61 +290,8 @@ function Chat({ username, onSignout }) {
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
         
-        const events = buffer.split('\n\n');
-        buffer = events.pop() || '';
-
-        for (const event of events) {
-          if (!event.trim()) continue;
-          
-          const lines = event.split('\n');
-          let eventType = null;
-          let data = null;
-
-          for (const line of lines) {
-            if (line.startsWith('event: ')) {
-              eventType = line.substring(7);
-            } else if (line.startsWith('data: ')) {
-              data = line.substring(6);
-            }
-          }
-
-          if (eventType && data) {
-            try {
-              const parsedData = JSON.parse(data);
-              
-              switch (eventType) {
-                case 'session_created':
-                  newSessionId = parsedData.session_id;
-                  setCurrentSessionId(parsedData.session_id);
-                  break;
-                case 'content':
-                  fullResponse += parsedData.content;
-                  setMessages(prev => prev.map((msg, index) => 
-                    index === streamingMessageIndex ? 
-                      { ...msg, content: fullResponse } : msg
-                  ));
-                  break;
-                case 'complete':
-                  if (parsedData.session_id && parsedData.session_id !== currentSessionId) {
-                    setCurrentSessionId(parsedData.session_id);
-                    loadUserSessions();
-                  }
-                  
-                  if (parsedData.memories && parsedData.memories.length > 0) {
-                    console.log('Memories used for response:', parsedData.memories);
-                  }
-                  break;
-                case 'error':
-                  throw new Error(parsedData.error);
-              }
-            } catch (parseError) {
-              console.warn('Failed to parse SSE data:', parseError);
-            }
-          }
-        }
+        buffer = processStreamChunk(buffer, decoder, value, streamingMessageIndex, fullResponseRef);
       }
     } catch (error) {
       const errorMessage = {
@@ -305,55 +322,7 @@ function Chat({ username, onSignout }) {
 
     setInput('');
     
-    try {
-      await sendMessageStreaming(input);
-    } catch (streamError) {
-      console.warn('Streaming failed, falling back to regular API:', streamError);
-      
-      setIsLoading(true);
-      try {
-        const requestBody = { message: input, user_id: username };
-
-        const response = await loggedFetch(currentSessionId 
-          ? `/api/v1/chat/${username}/${currentSessionId}` 
-          : `/api/v1/chat/${username}/new`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify(requestBody)
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        if (data.session_id && data.session_id !== currentSessionId) {
-          setCurrentSessionId(data.session_id);
-          loadUserSessions();
-        }
-        
-        const assistantMessage = {
-          type: 'assistant',
-          content: data.response || 'No response received',
-          timestamp: new Date()
-        };
-
-        setMessages(prev => [...prev, assistantMessage]);
-      } catch (error) {
-        const errorMessage = {
-          type: 'system',
-          content: `Error: ${error.message}`,
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, errorMessage]);
-      } finally {
-        setIsLoading(false);
-      }
-    }
+    await sendMessageStreaming(input);
   };
 
   const handleKeyPress = (e) => {
@@ -367,8 +336,8 @@ function Chat({ username, onSignout }) {
 
 
   return (
-    <div className={`terminal ${isPanelOpen ? 'with-api-panel' : ''}`}>
-      <ApiLogPanel />
+    <div className={`terminal ${isPanelOpen ? 'with-insight-panel' : ''}`}>
+      <InsightPanel username={username} />
       {showSessions && (
         <div className="sessions-sidebar">
           <div className="sessions-header">

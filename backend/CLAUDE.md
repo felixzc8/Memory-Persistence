@@ -61,7 +61,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 
 **Pydantic Schemas (`app/schemas/`)**:
 - `ChatRequest` / `ChatResponse` - Chat message request/response structures
-- `MemorySearchRequest` / `MemorySearchResponse` - Memory search operations (imported from TiMemory)
 - `Session` / `SessionListResponse` / `UpdateSessionRequest` - Session management (imported from TiMemory)
 - `User` - User profile and authentication data
 - `ErrorResponse` - Structured error response models
