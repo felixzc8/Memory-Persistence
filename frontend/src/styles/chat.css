@@ -299,22 +299,22 @@
 }
 
 /* Adjust terminal layout when API panel is open */
-.terminal.with-api-panel {
+.terminal.with-insight-panel {
   position: relative;
 }
 
-.terminal.with-api-panel .terminal-body {
+.terminal.with-insight-panel .terminal-body {
   margin-right: 50%;
 }
 
 @media (max-width: 1024px) {
-  .terminal.with-api-panel .terminal-body {
+  .terminal.with-insight-panel .terminal-body {
     margin-right: 70%;
   }
 }
 
 @media (max-width: 768px) {
-  .terminal.with-api-panel .terminal-body {
+  .terminal.with-insight-panel .terminal-body {
     margin-right: 0;
     margin-bottom: 60vh;
   }
