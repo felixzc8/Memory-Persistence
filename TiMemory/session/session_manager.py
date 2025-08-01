@@ -1,8 +1,8 @@
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session as DBSession
-from sqlalchemy import and_, desc
-from .models import Session, Message
-from .schemas.session import (
+from sqlalchemy import and_, desc, func
+from ..models import Session, Message
+from ..schemas.session import (
     Session as SessionSchema, 
     SessionMessage, 
     SessionSummary,
@@ -225,26 +225,27 @@ class SessionManager:
             
             return [{"role": msg.role, "content": msg.content} for msg in recent_messages]
 
-    def create_summary(self, session_id: str, content: str, vector: List[float], message_count: int) -> bool:
-        """Create a new summary record for the session."""
+    def update_session_summary(self, session_id: str, content: str, vector: List[float], message_count: int) -> bool:
+        """Update session with new summary content and metadata."""
         with self.db_session_factory() as db:
             try:
-                summary = Summary(
-                    id=str(uuid.uuid4()),
-                    session_id=session_id,
-                    content=content,
-                    vector=vector,
-                    message_count_at_creation=message_count
-                )
+                session = db.query(Session).filter(Session.session_id == session_id).first()
+                if not session:
+                    logger.error(f"Session {session_id} not found")
+                    return False
                 
-                db.add(summary)
+                session.summary = content
+                session.vector = vector
+                session.summary_updated_at = func.now()
+                session.last_summary_generated_at = message_count
+                
                 db.commit()
                 
-                logger.info(f"Created summary for session {session_id} at message count {message_count}")
+                logger.info(f"Updated summary for session {session_id} at message count {message_count}")
                 return True
             except Exception as e:
                 db.rollback()
-                logger.error(f"Error creating summary for session {session_id}: {e}")
+                logger.error(f"Error updating summary for session {session_id}: {e}")
                 return False
 
     def get_message_count(self, session_id: str) -> int:
@@ -253,40 +254,52 @@ class SessionManager:
             return db.query(Message).filter(Message.session_id == session_id).count()
 
     def get_session_summary(self, session_id: str) -> Optional[str]:
-        """Get current session summary content."""
-        latest_summary = self.get_latest_summary(session_id)
-        return latest_summary.content if latest_summary else None
-
-    def get_latest_summary(self, session_id: str) -> Optional[Summary]:
-        """Get the most recent summary for a session."""
-        with self.db_session_factory() as db:
-            return db.query(Summary).filter(
-                Summary.session_id == session_id
-            ).order_by(Summary.created_at.desc()).first()
-
-    def should_generate_summary(self, session_id: str, message_limit: int, summary_threshold: int) -> bool:
-        """
-        Check if summary should be generated:
-        1. Once total message count reaches message_limit, generate first summary
-        2. When difference between current count and latest summary's message_count_at_creation >= summary_threshold, generate new summary
-        """
+        """Get current session summary content from session table."""
         with self.db_session_factory() as db:
             session = db.query(Session).filter(Session.session_id == session_id).first()
-            if not session:
-                return False
+            return session.summary if session else None
+    
+    def get_last_memory_processed_at(self, session_id: str) -> int:
+        """Get the message count when memory was last processed."""
+        with self.db_session_factory() as db:
+            session = db.query(Session).filter(Session.session_id == session_id).first()
+            return session.last_memory_processed_at if session else 0
+    
+    def get_last_summary_generated_at(self, session_id: str) -> int:
+        """Get the message count when summary was last generated."""
+        with self.db_session_factory() as db:
+            session = db.query(Session).filter(Session.session_id == session_id).first()
+            return session.last_summary_generated_at if session else 0
+    
+    def update_last_memory_processed_at(self, session_id: str, message_count: int) -> bool:
+        """Update the last memory processed message count."""
+        with self.db_session_factory() as db:
+            try:
+                session = db.query(Session).filter(Session.session_id == session_id).first()
+                if not session:
+                    logger.error(f"Session {session_id} not found")
+                    return False
                 
-            current_count = session.message_count
-            
-            if current_count < message_limit:
-                return False
-            
-            latest_summary = self.get_latest_summary(session_id)
-            
-            if latest_summary is None:
+                session.last_memory_processed_at = message_count
+                db.commit()
+                
+                logger.info(f"Updated last memory processed at for session {session_id}: {message_count}")
                 return True
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Error updating last memory processed at for session {session_id}: {e}")
+                return False
+    
+    def get_messages_since_count(self, session_id: str, since_count: int) -> List[Dict[str, str]]:
+        """Get messages from a specific message count onwards."""
+        with self.db_session_factory() as db:
+            # Get messages ordered by creation time, skip the first 'since_count' messages
+            messages = db.query(Message).filter(
+                Message.session_id == session_id
+            ).order_by(Message.created_at).offset(since_count).all()
             
-            messages_since_last_summary = current_count - latest_summary.message_count_at_creation
-            return messages_since_last_summary >= summary_threshold
+            return [{"role": msg.role, "content": msg.content} for msg in messages]
+
 
 
 

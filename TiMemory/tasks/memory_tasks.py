@@ -23,7 +23,7 @@ def process_memories(self, messages: List[Dict[str, str]], user_id: str, session
     Background task to extract and store memories from messages.
     """
     try:
-        logger.info(f"Starting background memory extraction for user {user_id}, session {session_id}")
+        logger.info(f"Starting background memory processing for user {user_id}, session {session_id}")
         
         from ..timemory import TiMemory
         config = MemoryConfig()
@@ -31,32 +31,13 @@ def process_memories(self, messages: List[Dict[str, str]], user_id: str, session
         
         memory.process_memories(messages, user_id, session_id)
         
-        logger.info(f"Completed background memory extraction for user {user_id}")
+        logger.info(f"Completed background memory processing for user {user_id}")
         return {"status": "success", "user_id": user_id, "session_id": session_id}
         
     except Exception as e:
-        logger.error(f"Error in background memory extraction for user {user_id}: {e}")
+        logger.error(f"Error in background memory processing for user {user_id}: {e}")
         self.retry(countdown=60, max_retries=3)
         raise
 
-@celery_app.task(base=AsyncTask, bind=True)  
-async def process_summaries(self, user_id: str, session_id: str):
-    """
-    Background task to generate conversation summaries.
-    """
-    try:
-        logger.info(f"Starting background summary generation for user {user_id}, session {session_id}")
-        
-        from ..timemory import TiMemory
-        config = MemoryConfig()
-        memory = TiMemory(config)
-        
-        await memory.process_summaries(user_id, session_id)
-        
-        logger.info(f"Completed background summary generation for user {user_id}")
-        return {"status": "success", "user_id": user_id, "session_id": session_id}
-        
-    except Exception as e:
-        logger.error(f"Error in background summary generation for user {user_id}: {e}")
-        self.retry(countdown=60, max_retries=3)
-        raise
+# Removed process_summaries background task - no longer needed
+# Summary generation now happens directly in topic change detection

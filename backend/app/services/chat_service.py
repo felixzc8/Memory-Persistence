@@ -35,8 +35,7 @@ class ChatService:
         try:
             response_data = await memory_service.memory.chat_with_memory(message, user_id, request_time, session_id)
             
-            if response_data.get("session_id"):
-                memory_service.memory.queue_summary_processing(user_id, response_data["session_id"])
+            # Topic change detection and memory processing now handled within chat_with_memory
             
             return ChatResponse(
                 response=response_data["response"],
@@ -76,8 +75,7 @@ class ChatService:
                 if isinstance(content, str):
                     yield f"event: content\ndata: {json.dumps({'content': content})}\n\n"
                 elif isinstance(content, dict):
-                    if content.get('session_id'):
-                        memory_service.memory.queue_summary_processing(user_id, content['session_id'])
+                    # Topic change detection and memory processing now handled within chat_with_memory_stream
                     yield f"event: complete\ndata: {json.dumps({'session_id': content.get('session_id'), 'memories': content.get('memories'), 'status': 'completed'})}\n\n"
                     return
             
