@@ -25,6 +25,10 @@ class Session(BaseModel):
     created_at: datetime = Field(..., description="Session creation timestamp")
     last_activity: datetime = Field(..., description="Last activity timestamp")
     message_count: int = Field(default=0, description="Total message count in session")
+    summary: Optional[str] = Field(None, description="Current session summary")
+    summary_updated_at: Optional[datetime] = Field(None, description="When summary was last updated")
+    last_summary_generated_at: int = Field(default=0, description="Message count when summary was last generated")
+    last_memory_processed_at: int = Field(default=0, description="Message count when memory was last processed")
 
 class SessionSummary(BaseModel):
     session_id: str = Field(..., description="Unique session identifier")
@@ -33,6 +37,8 @@ class SessionSummary(BaseModel):
     created_at: datetime = Field(..., description="Session creation timestamp")
     last_activity: datetime = Field(..., description="Last activity timestamp")
     message_count: int = Field(..., description="Total message count in session")
+    summary: Optional[str] = Field(None, description="Current session summary")
+    summary_updated_at: Optional[datetime] = Field(None, description="When summary was last updated")
 
 class UpdateSessionRequest(BaseModel):
     title: Optional[str] = Field(None, max_length=100, description="New session title")
