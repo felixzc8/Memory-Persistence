@@ -35,3 +35,5 @@ class MemoryConsolidationResponse(BaseModel):
 class MemoryResponse(BaseModel):
     memories: List[Memory]
     
+class TopicChangedResponse(BaseModel):
+    topic_changed: bool

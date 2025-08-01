@@ -1,11 +1,11 @@
-from .prompts import FACT_EXTRACTION_PROMPT, MEMORY_CONSOLIDATION_PROMPT, CONVERSATION_SUMMARY_PROMPT
+from .prompts import FACT_EXTRACTION_PROMPT, MEMORY_CONSOLIDATION_PROMPT, CONVERSATION_SUMMARY_PROMPT, TOPIC_CHANGE_DETECTION_PROMPT
 from .llms.openai import OpenAILLM
 from .embedding.openai import OpenAIEmbeddingModel
 from .tidb import TiDB
 from .session_manager import SessionManager
 from .knowledge_graph_client import KnowledgeGraphClient
 from typing import List, Dict
-from .schemas.memory import Memory, MemoryResponse, MemoryExtractionResponse, MemoryConsolidationResponse, MemoryConsolidationItem
+from .schemas.memory import Memory, MemoryResponse, MemoryExtractionResponse, MemoryConsolidationResponse, MemoryConsolidationItem, TopicChangedResponse
 from .config.base import MemoryConfig
 from .models.message import Message
 from TiMemory.tasks.memory_tasks import process_memories, process_summaries
@@ -17,6 +17,7 @@ class TiMemory:
         self.fact_extraction_prompt = FACT_EXTRACTION_PROMPT
         self.memory_consolidation_prompt = MEMORY_CONSOLIDATION_PROMPT
         self.conversation_summary_prompt = CONVERSATION_SUMMARY_PROMPT
+        self.topic_change_detection_prompt = TOPIC_CHANGE_DETECTION_PROMPT
         self.config = config
 
         self.tidb = TiDB(config)
@@ -251,6 +252,37 @@ class TiMemory:
                     content=memory.content,
                     memory_attributes=memory.memory_attributes.model_dump()
                 )
+
+    def detect_topic_change(self, messages: List[Dict[str, str]]) -> bool:
+        """
+        Analyze a sequence of messages to detect if there has been a topic change.
+        
+        Args:
+            messages: List of message dictionaries with 'role' and 'content' keys
+            
+        Returns:
+            bool: True if topic change detected, False otherwise
+        """
+        if not messages or len(messages) < 2:
+            return False
+            
+        try:
+            self.logger.info(f"Analyzing {len(messages)} messages for topic change")
+            
+            response = self.llm.generate_parsed_response(
+                instructions=self.topic_change_detection_prompt,
+                input=messages,
+                response_format=TopicChangedResponse
+            )
+            
+            topic_changed = response.topic_changed
+            self.logger.info(f"Topic change detection result: {topic_changed}")
+            
+            return topic_changed
+            
+        except Exception as e:
+            self.logger.error(f"Error in topic change detection: {e}")
+            return False
 
     def generate_conversation_summary(self, session_id: str, existing_summary: str = None) -> str:
         """Generate summary from existing summary and recent chat messages."""

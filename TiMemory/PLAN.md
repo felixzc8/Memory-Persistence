@@ -78,9 +78,9 @@ NO = Same topic continues, no processing needed
 
 **Detection Logic**:
 1. Collect messages between `last_memory_processed_at` message number and current message
-2. Pass to topic change detection LLM
-3. If YES: Process memories for this message segment and update `last_memory_processed_at`
-4. If NO: Continue without processing, keep existing `last_memory_processed_at`
+2. Pass to topic change detection LLM using `TopicChangedResponse` model for structured output
+3. If `topic_changed: true`: Process memories for this message segment and update `last_memory_processed_at`
+4. If `topic_changed: false`: Continue without processing, keep existing `last_memory_processed_at`
 
 ## Implementation Plan
 
@@ -96,10 +96,10 @@ NO = Same topic continues, no processing needed
 
 
 ### Phase 2: Topic Change Detection
-1. **Create Topic Detection Module** (`topic_detector.py`)
-   - LLM prompt for binary topic change detection
-   - Function to analyze message sequences
-   - Integration with existing LLM infrastructure
+1. **Add Topic Detection to TiMemory Core** (`timemory.py`)
+   - Add topic change detection method using structured output
+   - Function to analyze message sequences using `TopicChangedResponse` model
+   - Integration with existing `OpenAILLM.generate_parsed_response()` method
 
 
 ### Phase 3: Memory Processing Logic
