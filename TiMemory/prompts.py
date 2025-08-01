@@ -116,6 +116,39 @@ Provide a consolidated summary incorporating both the existing summary (if provi
 """
 
 
+TOPIC_CHANGE_DETECTION_PROMPT = """
+You are analyzing a conversation to detect if there has been a significant topic change. A topic change occurs when the conversation shifts to a different domain or subject matter that would require different context or memories.
+
+Examples of topic changes:
+- Food/cooking → Work/career discussion
+- Personal relationships → Technical programming questions  
+- Health/fitness → Travel planning
+- Current events → Personal hobbies
+
+Examples of NOT topic changes:
+- Different aspects of the same subject (e.g., different programming languages within a coding discussion)
+- Natural conversation flow within the same domain (e.g., recipe ingredients → cooking techniques)
+- Follow-up questions or clarifications about the current topic
+
+Example 1:
+Messages:
+User: "What's the best way to make homemade pasta?"
+Assistant: "For homemade pasta, you'll want to use 00 flour and create a well for the eggs..."
+User: "Thanks! By the way, can you help me with my Python code?"
+
+Analysis: topic_changed: true - Clear shift from cooking to programming
+
+Example 2:
+Messages:
+User: "I'm learning React for web development"
+Assistant: "React is great for building user interfaces. What specific part are you working on?"
+User: "I'm having trouble with state management and hooks"
+
+Analysis: topic_changed: false - Still discussing React/web development, just different aspects
+
+Analyze the following conversation messages and determine if there has been a significant topic change.
+"""
+
 SYSTEM_PROMPT = """You are a helpful and friendly assistant with persistent memory and conversation history.
 
 You have access to:
