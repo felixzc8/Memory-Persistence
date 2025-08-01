@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session as DBSession
 from sqlalchemy import and_, desc
-from .models import Session, Message, Summary
+from .models import Session, Message
 from .schemas.session import (
     Session as SessionSchema, 
     SessionMessage, 
