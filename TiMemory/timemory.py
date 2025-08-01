@@ -101,6 +101,13 @@ class TiMemory:
         """
         return self.memory_processor.get_all_memories(user_id)
 
+    def get_all_memories(self, user_id: str) -> MemoryResponse:
+        """        Get all memories for a user.
+        Returns a MemoryResponse containing a list of Memory objects.
+        """
+        memories = self.tidb.get_memories_by_user(user_id)
+        return memories
+
     def delete_all(self, user_id: str):
         """
         Delete all memories for a user.
