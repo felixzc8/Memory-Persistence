@@ -26,8 +26,7 @@ class MemoryConfig(BaseSettings):
     
     memory_collection_name: str = "memories"
     memory_search_limit: int = 10
-    message_limit: int = 20
-    summary_threshold: int = 10
+    max_context_message_count: int = 20
     
     redis_host: str = "localhost"
     redis_port: int = 6379

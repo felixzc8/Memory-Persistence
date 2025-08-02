@@ -87,7 +87,6 @@ class TiDB:
                 db.add(memory)
                 db.commit()
                 db.refresh(memory)
-                logger.info(f"Successfully inserted memory: {id}, user_id: {user_id}, content: {content[:50]}...")
             except Exception as e:
                 db.rollback()
                 logger.error(f"Failed to insert memory: {e}")
@@ -105,7 +104,7 @@ class TiDB:
             
             memory_schemas = [MemorySchema.model_validate(result, from_attributes=True) for result in results]
             
-            logger.info(f"Found {len(results)} memories for user: {user_id}: {memory_schemas}")
+            logger.debug(f"Memory search returned {len(results)} results for user: {user_id}")
             return MemoryResponse(memories=memory_schemas)
     
         

@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict
 from celery import Task
 from ..config.base import MemoryConfig
 from ..celery_app import celery_app
@@ -18,7 +18,7 @@ class AsyncTask(Task):
 
 
 @celery_app.task(bind=True)
-def process_memories(self, messages: List[Dict[str, str]], user_id: str, session_id: Optional[str] = None):
+def process_memories(self, messages: List[Dict[str, str]], user_id: str, session_id: str):
     """
     Background task to extract and store memories from messages.
     """
@@ -31,6 +31,11 @@ def process_memories(self, messages: List[Dict[str, str]], user_id: str, session
         
         memory.process_memories(messages, user_id, session_id)
         
+        # Update last processed message count after successful processing
+        current_message_count = memory.session_manager.get_message_count(session_id)
+        memory.session_manager.update_last_memory_processed_at(session_id, current_message_count)
+        logger.info(f"Updated last_memory_processed_at for session {session_id} to {current_message_count}")
+        
         logger.info(f"Completed background memory processing for user {user_id}")
         return {"status": "success", "user_id": user_id, "session_id": session_id}
         
@@ -39,5 +44,25 @@ def process_memories(self, messages: List[Dict[str, str]], user_id: str, session
         self.retry(countdown=60, max_retries=3)
         raise
 
-# Removed process_summaries background task - no longer needed
-# Summary generation now happens directly in topic change detection
+@celery_app.task(bind=True)
+def process_summary(self, session_id: str):
+    """
+    Background task to generate and update conversation summary.
+    """
+    try:
+        logger.info(f"Starting background summary processing for session {session_id}")
+        
+        from ..timemory import TiMemory
+        config = MemoryConfig()
+        memory = TiMemory(config)
+        
+        # Generate and update summary
+        memory.generate_and_update_summary(session_id)
+        
+        logger.info(f"Completed background summary processing for session {session_id}")
+        return {"status": "success", "session_id": session_id}
+        
+    except Exception as e:
+        logger.error(f"Error in background summary processing for session {session_id}: {e}")
+        self.retry(countdown=60, max_retries=3)
+        raise

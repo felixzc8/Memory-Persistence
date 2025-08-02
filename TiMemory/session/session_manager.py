@@ -214,16 +214,20 @@ class SessionManager:
         
         return title if title else f"Session {datetime.now(timezone.utc).strftime('%b %d')}"
     
-    def get_session_message_context(self, session_id: str, message_limit: int) -> List[Dict[str, str]]:
-        """Get the most recent message_limit number of messages from the session."""
+    def get_session_message_context(self, session_id: str) -> List[Dict[str, str]]:
+        """Get messages starting from last_summary_generated_at."""
         with self.db_session_factory() as db:
-            all_messages = db.query(Message).filter(
+            session = db.query(Session).filter(Session.session_id == session_id).first()
+            if not session:
+                return []
+            
+            last_summary_at = session.last_summary_generated_at
+            
+            messages = db.query(Message).filter(
                 Message.session_id == session_id
-            ).order_by(Message.created_at).all()
+            ).order_by(Message.created_at).offset(last_summary_at).all()
             
-            recent_messages = all_messages[-message_limit:] if len(all_messages) > message_limit else all_messages
-            
-            return [{"role": msg.role, "content": msg.content} for msg in recent_messages]
+            return [{"role": msg.role, "content": msg.content} for msg in messages]
 
     def update_session_summary(self, session_id: str, content: str, vector: List[float], message_count: int) -> bool:
         """Update session with new summary content and metadata."""
