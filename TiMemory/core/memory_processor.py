@@ -1,27 +1,24 @@
 from typing import List, Dict
 from ..schemas.memory import Memory, MemoryResponse, MemoryExtractionResponse, MemoryConsolidationResponse, MemoryConsolidationItem
 from ..config.base import MemoryConfig
-from ..tidb import TiDB
 from ..llms.openai import OpenAILLM
-from ..embedding.openai import OpenAIEmbeddingModel
 from ..prompts import FACT_EXTRACTION_PROMPT, MEMORY_CONSOLIDATION_PROMPT
 import logging
 
 class MemoryProcessor:
     """Handles all memory-related operations: extraction, consolidation, and storage."""
     
-    def __init__(self, config: MemoryConfig, tidb: TiDB, llm: OpenAILLM, embedder: OpenAIEmbeddingModel):
+    def __init__(self, config: MemoryConfig, llm: OpenAILLM):
         self.config = config
-        self.tidb = tidb
         self.llm = llm
-        self.embedder = embedder
         self.fact_extraction_prompt = FACT_EXTRACTION_PROMPT
         self.memory_consolidation_prompt = MEMORY_CONSOLIDATION_PROMPT
         self.logger = logging.getLogger(__name__)
 
-    def process_memories(self, messages: List[Dict[str, str]], user_id: str, session_id: str = None):
+    def process_memories(self, messages: List[Dict[str, str]], user_id: str, search_callback, session_id: str = None) -> List[Memory]:
         """
-        Process messages for memory extraction and consolidation (used by background workers).
+        Process messages for memory extraction and consolidation.
+        Returns list of Memory objects ready for storage.
         """
         from uuid import uuid4
         from ..schemas.memory import MemoryAttributes
@@ -32,8 +29,8 @@ class MemoryProcessor:
         self.logger.info(f"Extracted {len(extraction_response.memories)} memories: {extraction_response.memories}")
         
         if not extraction_response or not extraction_response.memories:
-            self.logger.info("No memories extracted, returning without storing")
-            return
+            self.logger.info("No memories extracted, returning empty list")
+            return []
         
         consolidation_items = []
         for item in extraction_response.memories:
@@ -49,40 +46,16 @@ class MemoryProcessor:
         
         new_memories_response = MemoryConsolidationResponse(memories=consolidation_items)
         
-        existing_memories = self._find_similar_memories(new_memories_response, user_id)
+        existing_memories = self._find_similar_memories(new_memories_response, user_id, search_callback)
         if len(existing_memories.memories) == 0:
-            self.logger.info(f"No similar existing memories found, storing {len(new_memories_response.memories)} new memories directly")
-            memory_objects = [Memory(id=item.id, user_id=user_id, content=item.content, memory_attributes=item.memory_attributes) for item in new_memories_response.memories]
-            self._store_memories(memory_objects, user_id)
+            self.logger.info(f"No similar existing memories found, returning {len(new_memories_response.memories)} new memories")
+            return [Memory(id=item.id, user_id=user_id, content=item.content, memory_attributes=item.memory_attributes) for item in new_memories_response.memories]
         else:
             self.logger.info(f"Found {len(existing_memories.memories)} similar existing memories, performing consolidation")
             consolidated_response = self._consolidate_memories(existing_memories, new_memories_response)
-            self.logger.info(f"Consolidation complete, storing {len(consolidated_response.memories)} memories")
-            memory_objects = [Memory(id=item.id, user_id=user_id, content=item.content, memory_attributes=item.memory_attributes) for item in consolidated_response.memories]
-            self._store_memories(memory_objects, user_id)
+            self.logger.info(f"Consolidation complete, returning {len(consolidated_response.memories)} memories")
+            return [Memory(id=item.id, user_id=user_id, content=item.content, memory_attributes=item.memory_attributes) for item in consolidated_response.memories]
 
-    def search(self, query: str, user_id: str, limit: int = 10) -> List[Memory]:
-        """
-        Search for memories based on a query string.
-        Returns a list of Memory objects.
-        """
-        embedding = self.embedder.embed(query)
-        results = self.tidb.search_memories(embedding, user_id, limit=limit)
-        return results.memories
-
-    def get_all_memories(self, user_id: str) -> MemoryResponse:
-        """        
-        Get all memories for a user.
-        Returns a MemoryResponse containing a list of Memory objects.
-        """
-        memories = self.tidb.get_memories_by_user(user_id)
-        return memories
-
-    def delete_all(self, user_id: str):
-        """
-        Delete all memories for a user.
-        """
-        self.tidb.delete_all_memories(user_id=user_id)
         
     def _extract_memories(self, messages: List[Dict[str, str]]) -> MemoryExtractionResponse:
         """
@@ -120,17 +93,17 @@ class MemoryProcessor:
         self.logger.info(f"Consolidation response: {response}")
         return response
 
-    def _find_similar_memories(self, new_memories: MemoryConsolidationResponse, user_id: str) -> MemoryConsolidationResponse:
+    def _find_similar_memories(self, new_memories: MemoryConsolidationResponse, user_id: str, search_callback) -> MemoryConsolidationResponse:
         """
         Find similar memories for each new memory to support consolidation.
         """
         existing_memories = []
         seen_ids = set()
+        total_searches = len(new_memories.memories)
         
         for memory in new_memories.memories:
-            embedding = self.embedder.embed(memory.content)
-            similar_memories = self.tidb.search_memories(embedding, user_id, limit=self.config.memory_search_limit)
-            for mem in similar_memories.memories:
+            similar_memories = search_callback(memory.content, user_id, self.config.memory_search_limit)
+            for mem in similar_memories:
                 if mem.id not in seen_ids:
                     consolidation_item = MemoryConsolidationItem(
                         id=mem.id,
@@ -139,29 +112,7 @@ class MemoryProcessor:
                     )
                     existing_memories.append(consolidation_item)
                     seen_ids.add(mem.id)
-            self.logger.info(f"Memory {memory.id} found {len(similar_memories.memories)} similar memories: {similar_memories.memories}")
         
+        self.logger.info(f"Performed {total_searches} similarity searches, found {len(existing_memories)} unique similar memories for consolidation")
         return MemoryConsolidationResponse(memories=existing_memories)
 
-    def _store_memories(self, consolidated_memories: List[Memory], user_id: str):
-        """
-        Store consolidated memories in TiDB. Handles new memories and updates.
-        """
-        for memory in consolidated_memories:
-            embedding = self.embedder.embed(memory.content)
-            status = memory.memory_attributes.status
-            
-            if status == 'outdated':
-                self.tidb.update_memory(
-                    id=memory.id,
-                    vector=embedding,
-                    memory_attributes=memory.memory_attributes.model_dump()
-                )
-            else:
-                self.tidb.insert_memory(
-                    id=memory.id,
-                    vector=embedding,
-                    user_id=user_id,
-                    content=memory.content,
-                    memory_attributes=memory.memory_attributes.model_dump()
-                )
