@@ -31,13 +31,17 @@ class TiMemory:
         self.memory_processor = MemoryProcessor(
             config=self.config,
             llm=self.llm
-        )
-        
-        self.summary_processor = SummaryProcessor(
-            config=self.config,
             llm=self.llm
         )
         
+        self.summary_processor = SummaryProcessor(
+        self.summary_processor = SummaryProcessor(
+            config=self.config,
+            llm=self.llm
+            llm=self.llm
+        )
+        
+        self.topic_processor = TopicProcessor(
         self.topic_processor = TopicProcessor(
             config=self.config,
             llm=self.llm
@@ -122,6 +126,9 @@ class TiMemory:
         embedding = self.embedder.embed(query)
         results = self.tidb.search_memories(embedding, user_id, limit=limit)
         return results.memories
+        embedding = self.embedder.embed(query)
+        results = self.tidb.search_memories(embedding, user_id, limit=limit)
+        return results.memories
 
     def get_all_memories(self, user_id: str) -> MemoryResponse:
         """        
@@ -130,11 +137,14 @@ class TiMemory:
         """
         return self.tidb.get_memories_by_user(user_id)
 
+        return self.tidb.get_memories_by_user(user_id)
+
 
     def delete_all(self, user_id: str):
         """
         Delete all memories for a user.
         """
+        self.tidb.delete_all_memories(user_id=user_id)
         self.tidb.delete_all_memories(user_id=user_id)
 
     def check_and_process_topic_change(self, user_id: str, session_id: str) -> bool:
