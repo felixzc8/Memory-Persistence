@@ -29,7 +29,7 @@ class TopicProcessor:
             return False
             
         try:
-            self.logger.info(f"Calling LLM to analyze {len(messages)} messages for topic change detection")
+            self.logger.info(f"Calling LLM to analyze {len(messages)} messages for topic change detection: {messages}")
             
             response = self.llm.generate_parsed_response(
                 instructions=self.topic_change_detection_prompt,

@@ -21,7 +21,7 @@ def init_worker_process(*args, **kwargs):
 celery_app = Celery(
     broker=f"redis://{config.redis_host}:{config.redis_port}/{config.redis_db}",
     backend=f"redis://{config.redis_host}:{config.redis_port}/{config.redis_db}",
-    include=["TiMemory.tasks.memory_tasks"]
+    include=["TiMemory.tasks.worker_tasks"]
 )
 
 celery_app.conf.update(
