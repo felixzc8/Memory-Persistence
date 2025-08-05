@@ -131,20 +131,31 @@ Examples of NOT topic changes:
 - Follow-up questions or clarifications about the current topic
 
 Example 1:
-Messages:
-User: "What's the best way to make homemade pasta?"
-Assistant: "For homemade pasta, you'll want to use 00 flour and create a well for the eggs..."
-User: "Thanks! By the way, can you help me with my Python code?"
-
-Analysis: topic_changed: true - Clear shift from cooking to programming
+Input: [{"role": "user", "content": "What's the best way to make homemade pasta?"},
+{"role": "assistant", "content": "For homemade pasta, you'll want to use 00 flour and create a well for the eggs. Mix them gradually until you form a smooth dough."},
+{"role": "user", "content": "Should I use a pasta machine or roll it by hand?"},
+{"role": "assistant", "content": "Both work well! A pasta machine gives more consistent thickness, but rolling by hand can be quite therapeutic. What type of pasta are you planning to make?"},
+{"role": "user", "content": "I was thinking fettuccine. Thanks for the help! By the way, can you help me debug my Python code? I'm getting an error with my Flask app."},
+{"role": "assistant", "content": "Of course! I'd be happy to help with your Flask app. What error are you encountering?"}]
+Output: {"topic_changed": true}
 
 Example 2:
-Messages:
-User: "I'm learning React for web development"
-Assistant: "React is great for building user interfaces. What specific part are you working on?"
-User: "I'm having trouble with state management and hooks"
+Input: [{"role": "user", "content": "I'm learning React for web development"},
+{"role": "assistant", "content": "React is great for building user interfaces! What specific part are you working on?"},
+{"role": "user", "content": "I'm having trouble with state management and hooks"},
+{"role": "assistant", "content": "State management can be tricky at first. Are you working with useState, useEffect, or something more complex like useReducer?"},
+{"role": "user", "content": "Mainly useState. I'm building a todo app and the state isn't updating properly when I add new items"},
+{"role": "assistant", "content": "That's a common issue! Are you directly mutating the state array, or are you creating a new array? With useState, you need to create a new array to trigger re-renders."}]
+Output: {"topic_changed": false}
 
-Analysis: topic_changed: false - Still discussing React/web development, just different aspects
+Example 3:
+Input: [{"role": "user", "content": "I've been having trouble sleeping lately"},
+{"role": "assistant", "content": "I'm sorry to hear that. Sleep issues can be really challenging. How long has this been going on?"},
+{"role": "user", "content": "About two weeks now. I think it started when I changed my work schedule"},
+{"role": "assistant", "content": "Schedule changes can definitely disrupt sleep patterns. Have you tried maintaining a consistent bedtime routine?"},
+{"role": "user", "content": "I've tried a few things but nothing seems to work. Actually, speaking of work, do you know anything about machine learning algorithms? I need to implement a recommendation system"},
+{"role": "assistant", "content": "Yes, I can help with machine learning! For recommendation systems, you have several options like collaborative filtering, content-based filtering, or hybrid approaches. What type of data are you working with?"}]
+Output: {"topic_changed": true}
 
 Analyze the following conversation messages and determine if there has been a significant topic change.
 """
