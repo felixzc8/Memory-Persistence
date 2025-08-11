@@ -51,10 +51,14 @@ class KnowledgeGraphClient:
             
             if response.status_code == 200:
                 result = response.json()
-                logger.info(f"Successfully saved personal memory to knowledge graph: {result}")
+                logger.info(f"Knowledge graph API response (status 200): {result}")
                 return result
             else:
-                logger.error(f"Knowledge graph API error: {response.status_code} - {response.text}")
+                try:
+                    result = response.json()
+                    logger.error(f"Knowledge graph API error (status {response.status_code}): {result}")
+                except:
+                    logger.error(f"Knowledge graph API error: {response.status_code} - {response.text}")
                 return None
                 
         except Exception as e:
