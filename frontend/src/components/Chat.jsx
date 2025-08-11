@@ -427,7 +427,7 @@ function Chat({ username, onSignout }) {
             onClick={togglePanel}
             title="Toggle API Log Panel"
           >
-            log
+            insights
           </button>
           <button 
             className="signout-btn"

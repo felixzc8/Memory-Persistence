@@ -79,7 +79,7 @@ const InsightPanel = ({ username }) => {
             onClick={() => setActiveView('logs')} 
             className={`view-toggle-btn ${activeView === 'logs' ? 'active' : ''}`}
           >
-            Insights
+            API Logs
           </button>
           <button 
             onClick={fetchMemories} 
