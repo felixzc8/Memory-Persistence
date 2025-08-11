@@ -10,6 +10,7 @@ from ..llms.openai import OpenAILLM
 from ..session.session_manager import SessionManager
 from ..core import MemoryProcessor, SummaryProcessor
 from ..schemas.memory import Memory
+from ..knowledge_graph_client import KnowledgeGraphClient
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,13 @@ def process_memories(self, messages: List[Dict[str, str]], user_id: str, session
         current_message_count = session_manager.get_message_count(session_id)
         session_manager.update_last_memory_processed_at(session_id, current_message_count)
         logger.info(f"Updated last_memory_processed_at for session {session_id} to {current_message_count}")
+        
+        # Save to knowledge graph
+        try:
+            knowledge_graph_client = KnowledgeGraphClient(config)
+            asyncio.run(knowledge_graph_client.save_personal_memory(messages, user_id, session_id))
+        except Exception as e:
+            logger.error(f"Failed to save personal memory to knowledge graph: {e}")
         
         logger.info(f"Completed background memory processing for user {user_id}")
         return {"status": "success", "user_id": user_id, "session_id": session_id}
